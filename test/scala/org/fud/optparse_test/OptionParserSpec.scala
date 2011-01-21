@@ -13,16 +13,19 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   
   var results: Map[String, Any] = Map.empty
   val opts = new OptionParser
-  opts.noArg("-x", "--expert", "Expert option") { () => results += "expert" -> true }
+  opts.noArg("-b ARG", "", "Expert option", "More...") { () => results += "expert" -> true }
+  opts.noArg("-cARG", "", "Expert option", "More...", "And more..") { () => results += "expert" -> true }
+  opts.noArg("", "--dang=[FOO]", "Dang option") { () => results += "expert" -> true }
+  opts.noArg("-x", "--expert", "Expert option", "more..") { () => results += "expert" -> true }
   opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
-  opts.reqArg("-n", "--name", "Set Name") { name: String => results += "name" -> name }
-  opts.reqArg("-s", "--size", "Set Size") { size: Int => results += "size" -> size }
-  opts.optArg("-r", "--reset", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
-  opts.optArg("-a", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
+  opts.reqArg("-n", "--name=NAME", "Set Name") { name: String => results += "name" -> name }
+  opts.reqArg("-s SIZE", "--size", "Set Size") { size: Int => results += "size" -> size }
+  opts.optArg("-r", "--reset [VAL]", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
+  opts.optArg("-a [AT]", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
   case class Foo(s: String)
   opts.addConverter { s: String => Foo(s) }
   opts.reqArg("-f", "--foo", "Set Foo") { foo : Foo => results += "foo" -> foo}
-  
+  println(opts)
   
   // ====================================================================================
   // ====================================================================================
