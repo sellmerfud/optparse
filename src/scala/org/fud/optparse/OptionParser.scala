@@ -4,6 +4,8 @@ package org.fud.optparse
 
 import collection.mutable.ListBuffer
 
+class OptionParserException(m: String) extends RuntimeException(m)
+
 /**
  * Option parser class based on Ruby class of same name.
  * Support command line parsing using POSIX style short and long arguments.
@@ -14,13 +16,13 @@ class OptionParser {
   protected val argv = new ListBuffer[String]
   protected val switches = new ListBuffer[Switch]
   
-  protected var curr_arg_display = ""  // Used for error reporting
+  protected var _curr_arg_display = ""  // Used for error reporting
+  def curr_arg_display = _curr_arg_display
   
-  class OptParseException(m: String) extends RuntimeException(m)
-  class ArgumentMissing extends OptParseException("argument missing: " + curr_arg_display)
-  class InvalidArgument extends OptParseException("invalid argument: " + curr_arg_display)
-  class InvalidOption extends RuntimeException("invalid option: " + curr_arg_display)
-  class AmbiguousOption extends RuntimeException("abmiguous option: " + curr_arg_display)
+  class ArgumentMissing extends OptionParserException("argument missing: " + curr_arg_display)
+  class InvalidArgument extends OptionParserException("invalid argument: " + curr_arg_display)
+  class InvalidOption extends OptionParserException("invalid option: " + curr_arg_display)
+  class AmbiguousOption extends OptionParserException("abmiguous option: " + curr_arg_display)
   
 
   abstract class Param
@@ -128,7 +130,7 @@ class OptionParser {
     if (argv.isEmpty)
       Terminate()
     else {
-      curr_arg_display = argv(0)
+      _curr_arg_display = argv(0)
       argv.remove(0) match {
         // The order of the cases here is important!
         case TerminationToken()           => Terminate()

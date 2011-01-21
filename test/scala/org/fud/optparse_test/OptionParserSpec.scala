@@ -3,13 +3,16 @@ package org.fud.optparse_test
 import _root_.org.scalatest.FlatSpec
 import _root_.org.scalatest.matchers.ShouldMatchers
 
-import org.fud.optparse.OptionParser
+import org.fud.optparse._
 
 class OptionParserSpec extends FlatSpec with ShouldMatchers {
-
-  val opts = new OptionParser
-  var results: Map[String, Any] = Map.empty
+  val ARGUMENT_MISSING = "argument missing:"
+  val INVALID_ARGUMENT = "invalid argument:"
+  val INVALID_OPTION   = "invalid option:"
+  val AMBIGUOUS_OPTION = "abmiguous option:"
   
+  var results: Map[String, Any] = Map.empty
+  val opts = new OptionParser
   opts.noArg("-x", "--expert", "Expert option") { () => results += "expert" -> true }
   opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
   opts.string("-n", "--name", "Set Name") { name: String => results += "name" -> name }
@@ -178,9 +181,10 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       opts.parse(List("foo", "--asdf"))
     } should produce [Exception]
     
-    evaluating {
+    var thrown = evaluating {
       opts.parse(List("foo", "-X"))
-    } should produce [Exception]
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_OPTION)
   }
   
   it should "handle switches with integer arguments" in {
