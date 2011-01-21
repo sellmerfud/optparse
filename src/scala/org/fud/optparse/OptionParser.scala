@@ -27,7 +27,7 @@ class OptionParser {
   
   case class Terminate() extends Param
 
-  case class NonSwitch() extends Param
+  case class NonSwitch(arg: String) extends Param
   
   // The short and long names are stored without leading '-' or '--'
   abstract class Switch(val short: String = "", val long: String = "", val display: Seq[String] = List()) extends Param {
@@ -35,31 +35,27 @@ class OptionParser {
     val requiresArg: Boolean = false
     // Called when this switch is detected on the command line.  Should handle the
     // invocation of the user's code to process this switch.
-    def process(arg: Option[String]): Unit = {}
+    def process: Unit = {}
   }
   
   
   class NoArgSwitch(s: String, l: String, d: Seq[String], func: () => Unit) extends Switch(s, l, d) {
-    override def process(arg: Option[String]): Unit = func()
+    override def process: Unit = func()
   }
   
   class ArgSwitch[T](s: String, l: String, d: Seq[String], convert: String => T, func: T => Unit) extends Switch(s, l, d) {
     override val takesArg = true
     override val requiresArg = true
     
-    override def process(arg: Option[String]): Unit = {
-      arg match {
-        case Some(a) => func(convert(a))
-        case None    => if (argv.isEmpty) throw new ArgumentMissing else func(convert(argv.remove(0)))
-      }
-    }
+    override def process: Unit =
+      if (argv.isEmpty) throw new ArgumentMissing else func(convert(argv.remove(0)))
   }
 
   class OptArgSwitch[T](s: String, l: String, d: Seq[String], convert: String => T, func: Option[T] => Unit) extends Switch(s, l, d) {
     override val takesArg = true
     
-    override def process(arg: Option[String]): Unit = {
-      if (argv.isEmpty || argv(0).startsWith("-"))
+    override def process: Unit = {
+      if (argv.isEmpty || (argv(0).startsWith("-") && argv(0).length > 1)) // Single '-' is stdin argument
         func(None)
       else
         func(Some(convert(argv.remove(0))))
@@ -128,23 +124,26 @@ class OptionParser {
   // If there is an argument appended to a switch then it is returned rather
   // than prepended to the argv buffer.  This is necessary because the argument may start
   // with a dash and if it were prepened to argv, we would erroneously treat it as a switch.
-  def nextParam: (Param, Option[String]) = {
+  def nextParam: Param = {
     if (argv.isEmpty)
-      (Terminate(), None)
+      Terminate()
     else {
       curr_arg_display = argv(0)
       argv.remove(0) match {
-        case TerminationToken()           => (Terminate(), None)
-        case StdinToken(arg)              => (NonSwitch(), Some(arg))
-        case LongSwitchWithArg(name, arg) => (longSwitch(name), Some(arg))
-        case LongSwitch(name)             => (longSwitch(name), None)
-        case ShortSwitch(name, "")        => (shortSwitch(name), None)
-        case ShortSwitch(name, rest)      =>
-          shortSwitch(name) match {
-            case switch if switch.takesArg => (switch, Some(rest))
-            case switch => ("-" + rest) +=: argv; (switch, None)
-          }
-        case arg                          => (NonSwitch(), Some(arg))
+        // The order of the cases here is important!
+        case TerminationToken()           => Terminate()
+        case StdinToken(arg)              => NonSwitch(arg)
+        case LongSwitchWithArg(name, arg) => longSwitch(name) match {
+          case switch if switch.takesArg => arg +=: argv; switch
+          case switch => ("-" + arg) +=: argv; switch
+        }
+        case LongSwitch(name)             => longSwitch(name)
+        case ShortSwitch(name, "")        => shortSwitch(name)
+        case ShortSwitch(name, rest)      => shortSwitch(name) match {
+          case switch if switch.takesArg => rest +=: argv; switch
+          case switch => ("-" + rest) +=: argv; switch
+        }
+        case arg                          => NonSwitch(arg)
       }
     }
   }
@@ -162,9 +161,9 @@ class OptionParser {
     var terminate = false
     while (!terminate) {
       nextParam match {
-        case (Terminate(), _)      => non_switch_args ++= argv; terminate = true
-        case (NonSwitch(), arg)    => non_switch_args += arg.get
-        case (switch: Switch, arg) => switch.process(arg)
+        case Terminate()    => non_switch_args ++= argv; terminate = true
+        case NonSwitch(arg) => non_switch_args += arg
+        case switch: Switch => switch.process
       }
     }
     
