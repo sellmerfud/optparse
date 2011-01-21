@@ -15,12 +15,27 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   val opts = new OptionParser
   opts.noArg("-x", "--expert", "Expert option") { () => results += "expert" -> true }
   opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
-  opts.string("-n", "--name", "Set Name") { name: String => results += "name" -> name }
-  opts.int("-s", "--size", "Set Size") { size: Int => results += "size" -> size }
+  opts.reqArg("-n", "--name", "Set Name") { name: String => results += "name" -> name }
+  opts.reqArg("-s", "--size", "Set Size") { size: Int => results += "size" -> size }
+  opts.optArg("-r", "--reset", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
+  opts.optArg("-a", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
+  case class Foo(s: String)
+  opts.addConverter { s: String => Foo(s) }
+  opts.reqArg("-f", "--foo", "Set Foo") { foo : Foo => results += "foo" -> foo}
+  
   
   // ====================================================================================
   // ====================================================================================
-  "OptionParser" should "handle empty argv" in {
+  "OptionParser"  should "detect attempts to add an option for a type with no coverter" in {
+    results = Map.empty
+    val args = opts.parse(List())
+    args should be ('empty)
+    results should be ('empty)
+  }    
+  
+  // ====================================================================================
+  // ====================================================================================
+  it should "handle empty argv" in {
     results = Map.empty
     val args = opts.parse(List())
     args should be ('empty)
@@ -167,21 +182,24 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   }
   
   it should "throw an exception if a required argument is missing" in {
-    evaluating {
+    var thrown = evaluating {
       opts.parse(List("foo", "--name"))
-    } should produce [Exception]
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (ARGUMENT_MISSING)
     
-    evaluating {
+    thrown = evaluating {
       opts.parse(List("foo", "-n"))
-    } should produce [Exception]
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (ARGUMENT_MISSING)
   }
   
   it should "detect invalid switches" in {
-    evaluating {
-      opts.parse(List("foo", "--asdf"))
-    } should produce [Exception]
-    
     var thrown = evaluating {
+      opts.parse(List("foo", "--asdf"))
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_OPTION)
+    
+    thrown = evaluating {
       opts.parse(List("foo", "-X"))
     } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_OPTION)
@@ -215,5 +233,136 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "size"
     results("size") should be === (9)
   }
+  
+  
+  // ====================================================================================
+  // ====================================================================================
+  it should "handle short switches with optional arguments" in {
+    results = Map.empty
+    var args = opts.parse(List("-r", "bottom", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (1)
+    results should contain key "dir"
+    results("dir") should be === "bottom"
+
+    results = Map.empty
+    args = opts.parse(List("-rbottom", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (1)
+    results should contain key "dir"
+    results("dir") should be === "bottom"
+
+    results = Map.empty
+    args = opts.parse(List("-xr", "bottom", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (2)
+    results should contain key "expert"
+    results should contain key "dir"
+    results("expert") should be === (true)
+    results("dir") should be === "bottom"
+
+    results = Map.empty
+    args = opts.parse(List("-xrbottom", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (2)
+    results should contain key "expert"
+    results should contain key "dir"
+    results("expert") should be === (true)
+    results("dir") should be === "bottom"
+
+    results = Map.empty
+    args = opts.parse(List("-xr", "--", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (2)
+    results should contain key "expert"
+    results should contain key "dir"
+    results("expert") should be === (true)
+    results("dir") should be === "top"
+
+    results = Map.empty
+    args = opts.parse(List("-r", "-x", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (2)
+    results should contain key "expert"
+    results should contain key "dir"
+    results("expert") should be === (true)
+    results("dir") should be === "top"
+
+    results = Map.empty
+    args = opts.parse(List("-r"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "dir"
+    results("dir") should be === "top"
+  }
+  
+  it should "handle long switches with optional arguments" in {
+    results = Map.empty
+    var args = opts.parse(List("--at", "10", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (1)
+    results should contain key "at"
+    results("at") should be === (10)
+
+    results = Map.empty
+    args = opts.parse(List("--at=10", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (1)
+    results should contain key "at"
+    results("at") should be === (10)
+
+    results = Map.empty
+    args = opts.parse(List("--at", "-x", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (2)
+    results should contain key "at"
+    results should contain key "expert"
+    results("at") should be === (100)
+    results("expert") should be === (true)
+
+    results = Map.empty
+    args = opts.parse(List("--at", "--", "foo"))
+    args should have length (1)
+    args(0) should be === "foo"
+    results should have size (1)
+    results should contain key "at"
+    results("at") should be === (100)
+
+    results = Map.empty
+    args = opts.parse(List("--at"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "at"
+    results("at") should be === (100)
+  }
+
+  // ====================================================================================
+  // ====================================================================================
+  it should "handle new types" in {
+    results = Map.empty
+    var args = opts.parse(List("--foo", "46"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "foo"
+    results("foo") should be === Foo("46")
+  }
+
+  // ====================================================================================
+  // ====================================================================================
+  it should "detect attempts to add an option for a type with no converter" in {
+    class SomeClass
+    evaluating {
+      opts.reqArg("-z", "--zoo", "Set Zoo") { zoo : SomeClass => results += "zoo" -> zoo}
+    } should produce [RuntimeException]
+  }    
   
 }

@@ -24,7 +24,6 @@ class OptionParser {
   class InvalidOption extends OptionParserException("invalid option: " + curr_arg_display)
   class AmbiguousOption extends OptionParserException("abmiguous option: " + curr_arg_display)
   
-
   abstract class Param
   
   case class Terminate() extends Param
@@ -63,37 +62,72 @@ class OptionParser {
         func(Some(convert(argv.remove(0))))
     }
   }
+
+  // Switch names may be specfied with or without leading '-'
+  // This routine cleans the name so we always store it without the dashes
+  protected def cleanName(name: String) = name.dropWhile(_ == '-').mkString
   
+  // A list of registered converters
+  protected var _converters = List[(ClassManifest[_], String => _)]()
   
-  private def withVal[T](v: T)(f: T => Unit): T = { f(v); v }
-  private def cleanName(name: String) = name.dropWhile(_ == '-').mkString
+  // Look up a converter given a ClassManifest.
+  // Throws an exception if not found.
+  protected def converter[T](m: ClassManifest[T]): String => T = {
+    // Check for exact match first then subclass
+    _converters.find(m == _._1).map(_._2.asInstanceOf[String => T]).getOrElse {
+      throw new RuntimeException("No Converter!")
+    }
+  }
   
+  // Register a converter function for the given 
+  def addConverter[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
+    _converters = (m -> f) :: _converters
+  }
+  
+  // Define default converters
+  addConverter {s: String => s}
+  addConverter { s: String => 
+    try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgument }
+  }
+  addConverter { s: String => 
+    try { s.toShort } catch { case _: NumberFormatException => throw new InvalidArgument }
+  }
+  addConverter { s: String => 
+    try { s.toLong } catch { case _: NumberFormatException => throw new InvalidArgument }
+  }
+  addConverter { s: String => 
+    try { s.toFloat } catch { case _: NumberFormatException => throw new InvalidArgument }
+  }
+  addConverter { s: String => 
+    try { s.toDouble } catch { case _: NumberFormatException => throw new InvalidArgument }
+  }
+  addConverter { s: String => 
+    s.toList match {
+      case c :: Nil => c
+      case _ => throw new InvalidArgument
+    }
+  }
+  
+  // Define a switch that takes no arguments
   def noArg(short: String, long: String, display: String*)(func: () => Unit): Unit = {
     val s = new NoArgSwitch(cleanName(short), cleanName(long), display, func)
     switches += s
     s
   }
-  
-  def string(short: String, long: String, display: String*)(func: String => Unit): Unit = {
-    val convert = { s: String => s}
-    val s = new ArgSwitch(cleanName(short), cleanName(long), display, convert, func)
-    switches += s
-    s
-  }
-  
-  def int(short: String, long: String, display: String*)(func: Int => Unit): Unit = {
-    val convert = { s: String => 
-      try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgument }
-    }
-    val s = new ArgSwitch(cleanName(short), cleanName(long), display, convert, func)
-    switches += s
-    s
-  }
 
-  
-  def optString(short: String, long: String, display: String*)(func: Option[String] => Unit): Unit = {
+  // Define a switch that takes a required argument
+  def reqArg[T](short: String, long: String, display: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit = {
+    val s = new ArgSwitch(cleanName(short), cleanName(long), display, converter(m), func)
+    switches += s
+    s
   }
   
+  // Define a switch that takes an optional argument
+  def optArg[T](short: String, long: String, display: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit = {
+    val s = new OptArgSwitch(cleanName(short), cleanName(long), display, converter(m), func)
+    switches += s
+    s
+  }
   
   // Look up a switch by the given long name.
   // Partial name lookup is performed. If more than one match is found then if one is an
