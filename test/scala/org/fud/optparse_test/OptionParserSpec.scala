@@ -347,6 +347,17 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
   // ====================================================================================
   // ====================================================================================
+  it should "interpret --name= to have a empty string argument" in {
+    results = Map.empty
+    var args = opts.parse(List("--name="))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "name"
+    results("name") should be === ""
+  }
+
+  // ====================================================================================
+  // ====================================================================================
   it should "handle new types" in {
     results = Map.empty
     var args = opts.parse(List("--foo", "46"))
