@@ -21,9 +21,12 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   opts.noArg("-X", "--expert") { () => results += "notUsed2" -> true }
   opts.noArg("-x", "--expert", "Expert option", "more..") { () => results += "expert" -> true }
   opts.reqArg("-n", "--name=NAME", "Set Name") { name: String => results += "name" -> name }
-  opts.reqArg("-s SIZE", "--size", "Set Size") { size: Int => results += "size" -> size }
   opts.optArg("-r", "--reset [VAL]", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
+  opts.reqArg("-s SIZE", "--size", "Set Size") { size: Int => results += "size" -> size }
   opts.optArg("-a [AT]", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
+
+  opts.reqArg("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
+  opts.optArg("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
   
   opts.reqArg("-t", "--type (binary, ascii)", List("binary", "ascii")) { t => results += "type" -> t }
   opts.optArg("-z", "--zone [one, two, three]", Map("one" -> 1, "two" -> 2, "three" -> 3)) { z => 
@@ -382,6 +385,82 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should have size (1)
     results should contain key "name"
     results("name") should be === ""
+  }
+
+  // ====================================================================================
+  // opts.reqArg("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
+  // opts.optArg("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
+  // ====================================================================================
+  it should "interpret following args that begin with a '-' correctly (short)" in {
+    // Required argument
+    results = Map.empty
+    var args = opts.parse(List("-g-x"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "gist"
+    results("gist") should be === "-x"
+
+    results = Map.empty
+    args = opts.parse(List("-g", "-x")) // Required args are greedy!
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "gist"
+    results("gist") should be === "-x"
+
+    // Optional argument
+    results = Map.empty
+    args = opts.parse(List("-j-x")) // Attached, so should use as arg.
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "jazz"
+    results("jazz") should be === "-x"
+
+    results = Map.empty
+    args = opts.parse(List("-j", "-x")) // Optional arg, should not pick up the -x
+    args should be ('empty)
+    results should have size (2)
+    results should contain key "gist"
+    results should contain key "expert"
+    results("jazz") should be === ("bebop")
+    results("expert") should be === (true)
+  }
+  
+  // ====================================================================================
+  // opts.reqArg("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
+  // opts.optArg("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
+  // ====================================================================================
+  it should "interpret following args that begin with a '-' correctly (long)" in {
+    // Required argument
+    results = Map.empty
+    var args = opts.parse(List("--gist=-x"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "gist"
+    results("gist") should be === "-x"
+
+    results = Map.empty
+    args = opts.parse(List("--gist", "-x")) // Required args are greedy!
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "gist"
+    results("gist") should be === "-x"
+
+    // Optional argument
+    results = Map.empty
+    args = opts.parse(List("--jazz=-x")) // Attached, so should use as arg.
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "jazz"
+    results("jazz") should be === "-x"
+
+    results = Map.empty
+    args = opts.parse(List("--jazz", "-x")) // Optional arg, should not pick up the -x
+    args should be ('empty)
+    results should have size (2)
+    results should contain key "gist"
+    results should contain key "expert"
+    results("jazz") should be === ("bebop")
+    results("expert") should be === (true)
   }
 
   // ====================================================================================

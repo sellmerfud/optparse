@@ -1,17 +1,13 @@
 
- 
-With: -t --type=ARG (tall, short)
-   --type=other   => invalid arg
-   --type other   => invalid arg
-   -tother        => invalid arg (instead of ignoring arg)
-   -t other       => invalid arg
+foo -t-4
+   We should treat -4 as an argument rather than the following option
+   This is broken for OPTIONAL arguments
    
-With: -t --type=[ARG] (tall, short)
-   --type=other   => invalid arg
-   --type other   => invalid arg
-   -tother        => invalid arg (instead of ignoring arg)
-   -t other       => ignore arg and call func(None)
+foo --type=-3
+  We should treat -4 as an argument rather than the following option
+  This is broken for OPTIONAL arguments
    
+    
 Need to fix error reporting for case where arg is not attached to the switch
 (short or long).  We must append the arg in the error message. How do we know
 when to do this?
