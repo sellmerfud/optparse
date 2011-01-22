@@ -13,6 +13,9 @@ class OptionParserException(m: String) extends RuntimeException(m)
 
 class OptionParser {
   
+  var auto_help = true   // Set to false if you don't want -h, --help auto added
+                         // Or simply add your own switch for either -h, or --help to override.
+                         // The default help action will print help and exit(0)
   protected val argv = new ListBuffer[String]
   protected var switches = new ListBuffer[Switch]
   
@@ -66,6 +69,8 @@ class OptionParser {
   // The options are processed using the code that has been previously specified when
   // setting up the parser.  A List[String] of all non-option arguments is returned.
   def parse(args: Seq[String]): List[String] = {
+    if (auto_help && !switches.exists(s => s.short == "h" || s.long == "--help"))
+      this.noArg("-h", "--help", "Show this message") { () => println(this); exit(0) }
     val non_switch_args = new ListBuffer[String]
     argv.clear // Clear any remnants
     argv ++= args
@@ -86,7 +91,7 @@ class OptionParser {
   def addConverter[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
     _converters = (m -> f) :: _converters
   }
-  
+    
   class ArgumentMissing extends OptionParserException("argument missing: " + curr_arg_display)
   class InvalidArgument extends OptionParserException("invalid argument: " + curr_arg_display)
   class AmbiguousArgument extends OptionParserException("ambiguous argument: " + curr_arg_display)
@@ -354,7 +359,6 @@ class OptionParser {
 object Foo {
   def main(args: Array[String]): Unit = {
     val opts = new OptionParser
-
     opts.banner = "usage: Foo [options]"
     opts separator ""
     opts.noArg("-x", "--notUsed") { () => println("notUsed") }
@@ -363,7 +367,6 @@ object Foo {
     opts.noArg("-x", "--foo", "Expert Mode") { () => println("foo Mode")}
     opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
     opts.optArg("-t", "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
-    opts.noArg("-h", "--help", "Show this message") { () => println(opts); exit(0) }
     try {
       println("Args: " + opts.parse(args))
     }

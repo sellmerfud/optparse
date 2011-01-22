@@ -1,11 +1,4 @@
 
-When adding an opt, remove any existing opt that collides with either short or long name.
-
-When parse() is called
-  If no option with name -h or --help exists, then add one with:
-     opts.noArg("-h", "--help", "Show this message") { () => println(opts); exit(0) }
-  also add
-     var autoHelp = true  // Can be set to false to override above behavior
  
 With: -t --type=ARG (tall, short)
    --type=other   => invalid arg
