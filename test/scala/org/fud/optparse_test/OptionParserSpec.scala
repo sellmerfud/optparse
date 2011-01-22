@@ -22,8 +22,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   opts.optArg("-r", "--reset [VAL]", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
   opts.optArg("-a [AT]", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
   
-  opts.reqArg("-t", "--type (binary, ascii)", List("binary", "ascii")) { t: String => results += "type" -> t }
-  opts.optArg("-z", "--zone [one, two, three]", Map("one" -> 1, "two" -> 2, "three" -> 3)) { z: Option[Int] => 
+  opts.reqArg("-t", "--type (binary, ascii)", List("binary", "ascii")) { t => results += "type" -> t }
+  opts.optArg("-z", "--zone [one, two, three]", Map("one" -> 1, "two" -> 2, "three" -> 3)) { z => 
     results += "zone" -> z.getOrElse(1)
   }
   

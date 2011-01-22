@@ -14,7 +14,7 @@ class OptionParserException(m: String) extends RuntimeException(m)
 class OptionParser {
   
   protected val argv = new ListBuffer[String]
-  protected val switches = new ListBuffer[Switch]
+  protected var switches = List[Switch]()
   
   protected var _curr_arg_display = ""  // Used for error reporting
   def curr_arg_display = _curr_arg_display
@@ -26,38 +26,38 @@ class OptionParser {
   var banner = ""
   
   // --------------------------------------------------------------------------------------------
-  def separator(text: String) = switches += new Separator(text)
+  def separator(text: String) = switches = switches :+ new Separator(text)
   
   // --------------------------------------------------------------------------------------------
   // Define a switch that takes no arguments
   def noArg(short: String, long: String, info: String*)(func: () => Unit): Unit =
-    switches += new NoArgSwitch(getNames(short, long), info, func)
+    switches = switches :+ new NoArgSwitch(getNames(short, long), info, func)
 
   // --------------------------------------------------------------------------------------------
   // Define a switch that takes a required argument
   def reqArg[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
-    switches += new ArgSwitch(getNames(short, long), info, converter(m), func)
+    switches = switches :+ new ArgSwitch(getNames(short, long), info, converter(m), func)
   
   // Define a switch that takes a required argument where the valid values are given by a Seq[]
   def reqArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
-    switches += new ArgSwitchWithVals(getNames(short, long), info, vals.toList.map(v => (v.toString, v)), func)
+    switches = switches :+ new ArgSwitchWithVals(getNames(short, long), info, vals.toList.map(v => (v.toString, v)), func)
 
   // Define a switch that takes a required argument where the valid values are given by a Map
   def reqArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
-    switches += new ArgSwitchWithVals(getNames(short, long), info, vals.toList, func)
+    switches = switches :+ new ArgSwitchWithVals(getNames(short, long), info, vals.toList, func)
   
   // --------------------------------------------------------------------------------------------
   // Define a switch that takes an optional argument
   def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
-    switches += new OptArgSwitch(getNames(short, long), info, converter(m), func)
+    switches = switches :+ new OptArgSwitch(getNames(short, long), info, converter(m), func)
 
   // Define a switch that takes an optional argument where the valid values are given by a Seq[]
   def optArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
-    switches += new OptArgSwitchWithVals(getNames(short, long), info, vals.toList.map(v => (v.toString, v)), func)
+    switches = switches :+ new OptArgSwitchWithVals(getNames(short, long), info, vals.toList.map(v => (v.toString, v)), func)
   
   // Define a switch that takes an optional argument where the valid values are given by a Map
   def optArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
-    switches += new OptArgSwitchWithVals(getNames(short, long), info, vals.toList, func)
+    switches = switches :+ new OptArgSwitchWithVals(getNames(short, long), info, vals.toList, func)
   
   // --------------------------------------------------------------------------------------------
   // Parse the given command line.  Each token from the command line should be
@@ -117,10 +117,10 @@ class OptionParser {
     def process: Unit = {}
     
     override lazy val toString = {
-      val switches  = "    " + names
+      val sw   = "    " + names
       val sep  = "\n" + " " * 37
-      val sep1 = if (switches.length < 37) " " * (37 - switches.length) else sep
-      switches + info.mkString(sep1, sep, "")
+      val sep1 = if (sw.length < 37) " " * (37 - sw.length) else sep
+      sw + info.mkString(sep1, sep, "")
     }
   }
   
@@ -257,7 +257,7 @@ class OptionParser {
   // exact match it wins, otherwise and AmbiguousOption exception is thrown
   // Throws InvalidOption if the switch cannot be found
   protected def longSwitch(name: String): Switch = {
-    switches.toList.filter(_.long.startsWith(name)).sortWith(_.long.length < _.long.length) match {
+    switches.filter(_.long.startsWith(name)).sortWith(_.long.length < _.long.length) match {
       case x :: Nil => x
       case x :: xs  => if (x.long == name) x else throw new AmbiguousOption
       case Nil => throw new InvalidOption
@@ -343,7 +343,8 @@ object Foo {
     opts.banner = "usage: Foo [options]"
     opts separator ""
     opts.noArg("-x", "--expert", "Expert Mode") { () => println("Expert Mode")}
-    opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { name: String =>  println("Set Name: " +  name)}
+    opts.noArg("-x", "--foo", "Expert Mode") { () => println("foo Mode")}
+    opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
     opts.optArg("-t", "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
     opts.noArg("-h", "--help", "Show this message") { () => println(opts); exit(0) }
     try {
