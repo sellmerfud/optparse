@@ -186,11 +186,10 @@ class OptionParser {
       if (argv.isEmpty || (argv(0).startsWith("-") && argv(0).length > 1)) // Single '-' is stdin argument
         func(None)
       else {
-        // If there is an argument but it is not valid, the we will not remove it from argv
         vals.filter(_._1.startsWith(argv(0))).sortWith(_._1.length < _._1.length) match {
           case x :: Nil => processValue(x._2)
           case x :: xs  => if (x._1 == argv(0)) processValue(x._2) else throw new AmbiguousArgument
-          case Nil => func(None)
+          case Nil => throw new InvalidArgument
         }
       }
     }
@@ -361,12 +360,11 @@ object Foo {
     val opts = new OptionParser
     opts.banner = "usage: Foo [options]"
     opts separator ""
-    opts.noArg("-x", "--notUsed") { () => println("notUsed") }
-    opts.noArg("-X", "--expert") { () => println("notUsed2") }
     opts.noArg("-x", "--expert", "Expert Mode") { () => println("Expert Mode")}
-    opts.noArg("-x", "--foo", "Expert Mode") { () => println("foo Mode")}
     opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
     opts.optArg("-t", "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
+    opts.reqArg("-a", "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
+    opts.optArg("-b", "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
     try {
       println("Args: " + opts.parse(args))
     }
