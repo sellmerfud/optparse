@@ -19,20 +19,86 @@ class OptionParser {
   protected var _curr_arg_display = ""  // Used for error reporting
   def curr_arg_display = _curr_arg_display
   
-  def help = switches.mkString("\n")
+  def help = (if (banner.isEmpty) "" else banner + "\n") + switches.mkString("\n")
   override def toString = help
   
+  // The banner is displayed first by the help/toString methods
+  var banner = ""
+  
+  // --------------------------------------------------------------------------------------------
+  def separator(text: String) = switches += new Separator(text)
+  
+  // --------------------------------------------------------------------------------------------
+  // Define a switch that takes no arguments
+  def noArg(short: String, long: String, info: String*)(func: () => Unit): Unit =
+    switches += new NoArgSwitch(getNames(short, long), info, func)
+
+  // --------------------------------------------------------------------------------------------
+  // Define a switch that takes a required argument
+  def reqArg[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+    switches += new ArgSwitch(getNames(short, long), info, converter(m), func)
+  
+  // Define a switch that takes a required argument where the valid values are given by a Seq[]
+  def reqArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+    switches += new ArgSwitchWithVals(getNames(short, long), info, vals.toList.map(v => (v.toString, v)), func)
+
+  // Define a switch that takes a required argument where the valid values are given by a Map
+  def reqArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+    switches += new ArgSwitchWithVals(getNames(short, long), info, vals.toList, func)
+  
+  // --------------------------------------------------------------------------------------------
+  // Define a switch that takes an optional argument
+  def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+    switches += new OptArgSwitch(getNames(short, long), info, converter(m), func)
+
+  // Define a switch that takes an optional argument where the valid values are given by a Seq[]
+  def optArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+    switches += new OptArgSwitchWithVals(getNames(short, long), info, vals.toList.map(v => (v.toString, v)), func)
+  
+  // Define a switch that takes an optional argument where the valid values are given by a Map
+  def optArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+    switches += new OptArgSwitchWithVals(getNames(short, long), info, vals.toList, func)
+  
+  // --------------------------------------------------------------------------------------------
+  // Parse the given command line.  Each token from the command line should be
+  // in a separate entry in the given sequence such as the array of strings passed
+  // to def main(args: Array[String]) {}
+  // The options are processed using the code that has been previously specified when
+  // setting up the parser.  A List[String] of all non-option arguments is returned.
+  def parse(args: Seq[String]): List[String] = {
+    val non_switch_args = new ListBuffer[String]
+    argv.clear // Clear any remnants
+    argv ++= args
+    
+    var terminate = false
+    while (!terminate) {
+      nextToken match {
+        case Terminate()    => non_switch_args ++= argv; terminate = true
+        case NonSwitch(arg) => non_switch_args += arg
+        case switch: Switch => switch.process
+      }
+    }
+
+    non_switch_args.toList
+  }
+  
+  // Register a converter function for the given 
+  def addConverter[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
+    _converters = (m -> f) :: _converters
+  }
   
   class ArgumentMissing extends OptionParserException("argument missing: " + curr_arg_display)
   class InvalidArgument extends OptionParserException("invalid argument: " + curr_arg_display)
+  class AmbiguousArgument extends OptionParserException("ambiguous argument: " + curr_arg_display)
+  class NeedlessArgument extends OptionParserException("needless argument: " + curr_arg_display)
   class InvalidOption extends OptionParserException("invalid option: " + curr_arg_display)
-  class AmbiguousOption extends OptionParserException("abmiguous option: " + curr_arg_display)
+  class AmbiguousOption extends OptionParserException("ambiguous option: " + curr_arg_display)
   
-  abstract class Param
+  abstract class Token
   
-  case class Terminate() extends Param
+  case class Terminate() extends Token
 
-  case class NonSwitch(arg: String) extends Param
+  case class NonSwitch(arg: String) extends Token
 
   // Container for internal and display names of a switch.
   case class Names(short: String, long: String, display: String) {
@@ -40,7 +106,7 @@ class OptionParser {
   }
   
   // The short and long names are stored without leading '-' or '--'
-  abstract class Switch(names: Names, val info: Seq[String] = List()) extends Param {
+  abstract class Switch(names: Names, val info: Seq[String] = List()) extends Token {
     val takesArg: Boolean = false
     val requiresArg: Boolean = false
     def short = names.short
@@ -58,6 +124,9 @@ class OptionParser {
     }
   }
   
+  class Separator(text: String) extends Switch(Names("", "", ""), Seq()) {
+    override lazy val toString = text
+  }
   
   class NoArgSwitch(n: Names, d: Seq[String], func: () => Unit) extends Switch(n, d) {
     override def process: Unit = func()
@@ -70,6 +139,24 @@ class OptionParser {
     override def process: Unit =
       if (argv.isEmpty) throw new ArgumentMissing else func(convert(argv.remove(0)))
   }
+  
+  class ArgSwitchWithVals[T](n: Names, d: Seq[String], vals: List[(String, T)], func: T => Unit) extends Switch(n, d) {
+    override val takesArg = true
+    override val requiresArg = true
+    
+    override def process: Unit = {
+      if (argv.isEmpty)
+        throw new ArgumentMissing
+      else {
+        val arg = argv.remove(0)
+        vals.filter(_._1.startsWith(arg)).sortWith(_._1.length < _._1.length) match {
+          case x :: Nil => func(x._2)
+          case x :: xs  => if (x._1 == arg) func(x._2) else throw new AmbiguousArgument
+          case Nil => throw new InvalidArgument
+        }
+      }
+    }
+  }
 
   class OptArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: Option[T] => Unit) extends Switch(n, d) {
     override val takesArg = true
@@ -81,9 +168,31 @@ class OptionParser {
         func(Some(convert(argv.remove(0))))
     }
   }
+  
+  class OptArgSwitchWithVals[T](n: Names, d: Seq[String], vals: List[(String, T)], func: Option[T] => Unit) extends Switch(n, d) {
+    override val takesArg = true
 
-  val ShortSpec = """-(\S)(?:\s*(.+))?"""r
-  val LongSpec  = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?"""r
+    override def process: Unit = {
+      def processValue(value: T) {
+        argv.remove(0)
+        func(Some(value))
+      }
+      
+      if (argv.isEmpty || (argv(0).startsWith("-") && argv(0).length > 1)) // Single '-' is stdin argument
+        func(None)
+      else {
+        // If there is an argument but it is not valid, the we will not remove it from argv
+        vals.filter(_._1.startsWith(argv(0))).sortWith(_._1.length < _._1.length) match {
+          case x :: Nil => processValue(x._2)
+          case x :: xs  => if (x._1 == argv(0)) processValue(x._2) else throw new AmbiguousArgument
+          case Nil => func(None)
+        }
+      }
+    }
+  }
+
+  private val ShortSpec = """-(\S)(?:\s*(.+))?"""r
+  private val LongSpec  = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?"""r
   
   // Parse the switch names and return the 'fixed' names.
   // Short name: 
@@ -91,7 +200,11 @@ class OptionParser {
   //   - may be followed by an argument name with or without separating space.
   // Long name:
   //   - must begin with two '--'
-  //   - may be followed by a argument. There must be a single space or equals sign separating them.
+  //   - may be followed by a argument. If present the argument must be separated from
+  //     the long name in one of the following ways:
+  //       1.  spaces  #=> --name NAME, --name [NAME]
+  //       2.  =       #=> --name=NAME, --name=[NAME]
+  //       3.  [=      #=> --name[=NAME]
   //
   // If an arg is specified for both the short and long, then the long one will take
   // precedence.
@@ -139,11 +252,63 @@ class OptionParser {
     }
   }
   
-  // Register a converter function for the given 
-  def addConverter[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
-    _converters = (m -> f) :: _converters
+  // Look up a switch by the given long name.
+  // Partial name lookup is performed. If more than one match is found then if one is an
+  // exact match it wins, otherwise and AmbiguousOption exception is thrown
+  // Throws InvalidOption if the switch cannot be found
+  protected def longSwitch(name: String): Switch = {
+    switches.toList.filter(_.long.startsWith(name)).sortWith(_.long.length < _.long.length) match {
+      case x :: Nil => x
+      case x :: xs  => if (x.long == name) x else throw new AmbiguousOption
+      case Nil => throw new InvalidOption
+    }
   }
   
+  protected def shortSwitch(name: String): Switch = {
+    switches.find(_.short == name).getOrElse { throw new InvalidOption }
+  }
+  
+  private val TerminationToken   = "--"r
+  private val StdinToken         = "(-)"r
+  private val LongSwitchWithArg  = "--([^=]+)=(.*)"r
+  private val LongSwitch         = "--(.*)"r
+  private val ShortSwitch        = "-(.)(.*)"r
+  
+  // Get the next parameter from the argv buffer.
+  // It is possible that this routine will prepend switches back onto the argv
+  // where there is a short switch that does not take an argument with other
+  // characters appended to it.
+  //    -cvf  :Where -c is a switch that does not take arguments
+  // In this case we would prepend -vf back onto the argv buffer.
+  // If there is an argument appended to a switch then it is returned rather
+  // than prepended to the argv buffer.  This is necessary because the argument may start
+  // with a dash and if it were prepened to argv, we would erroneously treat it as a switch.
+  protected def nextToken: Token = {
+    if (argv.isEmpty)
+      Terminate()
+    else {
+      _curr_arg_display = argv(0)
+      argv.remove(0) match {
+        // The order of the cases here is important!
+        case TerminationToken()           => Terminate()
+        case StdinToken(arg)              => NonSwitch(arg)
+        case LongSwitchWithArg(name, arg) => longSwitch(name) match {
+          case switch if switch.takesArg => arg +=: argv; switch
+          case switch => throw new NeedlessArgument
+        }
+        case LongSwitch(name)             => longSwitch(name)
+        case ShortSwitch(name, "")        => shortSwitch(name)
+        case ShortSwitch(name, rest)      => shortSwitch(name) match {
+          case switch if switch.takesArg => rest +=: argv; switch
+          case switch => ("-" + rest) +=: argv; switch
+        }
+        case arg                          => NonSwitch(arg)
+      }
+    }
+  }
+  
+  
+  // ==========================================================================================
   // Define default converters
   addConverter {s: String => s}
   addConverter { s: String => 
@@ -167,116 +332,25 @@ class OptionParser {
       case _ => throw new InvalidArgument
     }
   }
+  // ==========================================================================================
   
-  // Define a switch that takes no arguments
-  def noArg(short: String, long: String, info: String*)(func: () => Unit): Unit = {
-    val s = new NoArgSwitch(getNames(short, long), info, func)
-    switches += s
-    s
-  }
-
-  // Define a switch that takes a required argument
-  def reqArg[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit = {
-    val s = new ArgSwitch(getNames(short, long), info, converter(m), func)
-    switches += s
-    s
-  }
-  
-  // Define a switch that takes an optional argument
-  def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit = {
-    val s = new OptArgSwitch(getNames(short, long), info, converter(m), func)
-    switches += s
-    s
-  }
-  
-  // Look up a switch by the given long name.
-  // Partial name lookup is performed. If more than one match is found then if one is an
-  // exact match it wins, otherwise and AmbiguousOption exception is thrown
-  // Throws InvalidOption if the switch cannot be found
-  def longSwitch(name: String): Switch = {
-    switches.toList.filter(_.long.startsWith(name)).sortWith(_.long.length < _.long.length) match {
-      case x :: Nil => x
-      case x :: xs  => if (x.long == name) x else throw new AmbiguousOption
-      case Nil => throw new InvalidOption
-    }
-  }
-  
-  def shortSwitch(name: String): Switch = {
-    switches.find(_.short == name).getOrElse { throw new InvalidOption }
-  }
-  
-  val TerminationToken   = "--"r
-  val StdinToken         = "(-)"r
-  val LongSwitchWithArg  = "--([^=]+)=(.*)"r
-  val LongSwitch         = "--(.*)"r
-  val ShortSwitch        = "-(.)(.*)"r
-  
-  // Get the next parameter from the argv buffer.
-  // It is possible that this routine will prepend switches back onto the argv
-  // where there is a short switch that does not take an argument with other
-  // characters appended to it.
-  //    -cvf  :Where -c is a switch that does not take arguments
-  // In this case we would prepend -vf back onto the argv buffer.
-  // If there is an argument appended to a switch then it is returned rather
-  // than prepended to the argv buffer.  This is necessary because the argument may start
-  // with a dash and if it were prepened to argv, we would erroneously treat it as a switch.
-  def nextParam: Param = {
-    if (argv.isEmpty)
-      Terminate()
-    else {
-      _curr_arg_display = argv(0)
-      argv.remove(0) match {
-        // The order of the cases here is important!
-        case TerminationToken()           => Terminate()
-        case StdinToken(arg)              => NonSwitch(arg)
-        case LongSwitchWithArg(name, arg) => longSwitch(name) match {
-          case switch if switch.takesArg => arg +=: argv; switch
-          case switch => ("-" + arg) +=: argv; switch
-        }
-        case LongSwitch(name)             => longSwitch(name)
-        case ShortSwitch(name, "")        => shortSwitch(name)
-        case ShortSwitch(name, rest)      => shortSwitch(name) match {
-          case switch if switch.takesArg => rest +=: argv; switch
-          case switch => ("-" + rest) +=: argv; switch
-        }
-        case arg                          => NonSwitch(arg)
-      }
-    }
-  }
-  
-  // Parse the given command line.  Each token from the command line should be
-  // in a separate entry in the given sequence such as the array of strings passed
-  // to def main(args: Array[String]) {}
-  // The options are processed using the code that has been previously specified when
-  // setting up the parser.  A List[String] of all non-option arguments is returned.
-  def parse(args: Seq[String]): List[String] = {
-    val non_switch_args = new ListBuffer[String]
-    argv.clear // Clear any remnants
-    argv ++= args
-    
-    var terminate = false
-    while (!terminate) {
-      nextParam match {
-        case Terminate()    => non_switch_args ++= argv; terminate = true
-        case NonSwitch(arg) => non_switch_args += arg
-        case switch: Switch => switch.process
-      }
-    }
-    
-    non_switch_args.toList
-  }
 }
 
 object Foo {
   def main(args: Array[String]): Unit = {
-    var results: Map[String, Any] = Map.empty
     val opts = new OptionParser
-    opts.noArg("-x", "--expert", "Expert option") { () => results += "expert" -> true }
-    // opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
-    // opts.reqArg("-n", "--name", "Set Name") { name: String => results += "name" -> name }
-    // opts.reqArg("-s", "--size", "Set Size") { size: Int => results += "size" -> size }
-    // opts.optArg("-r", "--reset", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
-    // opts.optArg("-a", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
-    opts.parse(List("-x", "foo"))
+
+    opts.banner = "usage: Foo [options]"
+    opts separator ""
+    opts.noArg("-x", "--expert", "Expert Mode") { () => println("Expert Mode")}
+    opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { name: String =>  println("Set Name: " +  name)}
+    opts.optArg("-t", "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
+    opts.noArg("-h", "--help", "Show this message") { () => println(opts); exit(0) }
+    try {
+      println("Args: " + opts.parse(args))
+    }
+    catch {
+      case e: OptionParserException => println(e.getMessage); exit(1)
+    }
   }
 }

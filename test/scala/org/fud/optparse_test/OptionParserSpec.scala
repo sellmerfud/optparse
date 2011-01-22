@@ -6,26 +6,32 @@ import _root_.org.scalatest.matchers.ShouldMatchers
 import org.fud.optparse._
 
 class OptionParserSpec extends FlatSpec with ShouldMatchers {
-  val ARGUMENT_MISSING = "argument missing:"
-  val INVALID_ARGUMENT = "invalid argument:"
-  val INVALID_OPTION   = "invalid option:"
-  val AMBIGUOUS_OPTION = "abmiguous option:"
+  val ARGUMENT_MISSING   = "argument missing:"
+  val INVALID_ARGUMENT   = "invalid argument:"
+  val AMBIGUOUS_ARGUMENT = "ambiguous argument:"
+  val NEEDLESS_ARGUMENT  = "needless argument:"
+  val INVALID_OPTION     = "invalid option:"
+  val AMBIGUOUS_OPTION   = "ambiguous option:"
   
   var results: Map[String, Any] = Map.empty
   val opts = new OptionParser
-  opts.noArg("-b ARG", "", "Expert option", "More...") { () => results += "expert" -> true }
-  opts.noArg("-cARG", "", "Expert option", "More...", "And more..") { () => results += "expert" -> true }
-  opts.noArg("", "--dang=[FOO]", "Dang option") { () => results += "expert" -> true }
+  
   opts.noArg("-x", "--expert", "Expert option", "more..") { () => results += "expert" -> true }
-  opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
   opts.reqArg("-n", "--name=NAME", "Set Name") { name: String => results += "name" -> name }
   opts.reqArg("-s SIZE", "--size", "Set Size") { size: Int => results += "size" -> size }
   opts.optArg("-r", "--reset [VAL]", "Reset..") { dir: Option[String] => results += "dir" -> dir.getOrElse("top")}
   opts.optArg("-a [AT]", "--at", "At..") { at: Option[Int] => results += "at" -> at.getOrElse(100)}
+  
+  opts.reqArg("-t", "--type (binary, ascii)", List("binary", "ascii")) { t: String => results += "type" -> t }
+  opts.optArg("-z", "--zone [one, two, three]", Map("one" -> 1, "two" -> 2, "three" -> 3)) { z: Option[Int] => 
+    results += "zone" -> z.getOrElse(1)
+  }
+  
   case class Foo(s: String)
   opts.addConverter { s: String => Foo(s) }
   opts.reqArg("-f", "--foo", "Set Foo") { foo : Foo => results += "foo" -> foo}
-  println(opts)
+  
+  opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
   
   // ====================================================================================
   // ====================================================================================
@@ -122,6 +128,13 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "help"
     results("expert") should be === (true)
     results("help") should be === (true)
+  }
+  
+  it should "reject needless arguments for long switches that don't take them" in {
+    var thrown = evaluating {
+      opts.parse(List("--expert=yes"))
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (NEEDLESS_ARGUMENT)
   }
   
   it should "handle short switches with required arguments" in {
@@ -369,6 +382,77 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "foo"
     results("foo") should be === Foo("46")
   }
+  
+  // ====================================================================================
+  // ====================================================================================
+  it should "handle switches with a required value limmited by a List of values" in {
+    results = Map.empty
+    var args = opts.parse(List("-t", "binary"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "type"
+    results("type") should be === "binary"
+ 
+    results = Map.empty
+    args = opts.parse(List("--type", "a"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "type"
+    results("type") should be === "ascii"
+    
+    var thrown = evaluating {
+      opts.parse(List("--type=ebcdic"))
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+  }
+  
+  // ====================================================================================
+  // ====================================================================================
+  it should "handle switches with an optional value limmited by a Map of values" in {
+    results = Map.empty
+    var args = opts.parse(List("-z"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "zone"
+    results("zone") should be === (1)
+ 
+    results = Map.empty
+    args = opts.parse(List("-z", "four"))
+    args should have length (1)
+    args(0) should be === "four"
+    results should have size (1)
+    results should contain key "zone"
+    results("zone") should be === (1)
+ 
+    results = Map.empty
+    args = opts.parse(List("-z", "tw"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "zone"
+    results("zone") should be === (2)
+ 
+    results = Map.empty
+    args = opts.parse(List("-zth"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "zone"
+    results("zone") should be === (3)
+ 
+    results = Map.empty
+    args = opts.parse(List("-ztx"))
+    args should have length (1)
+    args(0) should be === "tx"
+    results should have size (1)
+    results should contain key "zone"
+    results("zone") should be === (1)
+    
+    var thrown = evaluating {
+      opts.parse(List("--zone", "t"))
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (AMBIGUOUS_ARGUMENT)
+  }
+  
+  
 
   // ====================================================================================
   // ====================================================================================

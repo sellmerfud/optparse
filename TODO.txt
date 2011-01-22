@@ -1,0 +1,21 @@
+
+
+With: -t --type=ARG (tall, short)
+   --type=other   => invalid arg
+   --type other   => invalid arg
+   -tother        => invalid arg (instead of ignoring arg)
+   -t other       => invalid arg
+   
+With: -t --type=[ARG] (tall, short)
+   --type=other   => invalid arg
+   --type other   => invalid arg
+   -tother        => invalid arg (instead of ignoring arg)
+   -t other       => ignore arg and call func(None)
+   
+Need to fix error reporting for case where arg is not attached to the switch
+(short or long).  We must append the arg in the error message. How do we know
+when to do this?
+
+
+Args that handle comma separated lists ???  Do we need this?  Might as well.
+
