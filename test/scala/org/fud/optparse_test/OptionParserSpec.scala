@@ -15,7 +15,10 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   
   var results: Map[String, Any] = Map.empty
   val opts = new OptionParser
-  
+  // The first two switches should be removed when the third switch is added since
+  // the short and long names are duplicated. (See first test)
+  opts.noArg("-x", "--notUsed") { () => results += "notUsed" -> true }
+  opts.noArg("-X", "--expert") { () => results += "notUsed2" -> true }
   opts.noArg("-x", "--expert", "Expert option", "more..") { () => results += "expert" -> true }
   opts.reqArg("-n", "--name=NAME", "Set Name") { name: String => results += "name" -> name }
   opts.reqArg("-s SIZE", "--size", "Set Size") { size: Int => results += "size" -> size }
@@ -32,15 +35,24 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   opts.reqArg("-f", "--foo", "Set Foo") { foo : Foo => results += "foo" -> foo}
   
   opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
-  
-  // ====================================================================================
-  // ====================================================================================
-  "OptionParser"  should "detect attempts to add an option for a type with no coverter" in {
+    
+  "OptionParser" should "remove switches with identical names when adding a new switch" in {
     results = Map.empty
-    val args = opts.parse(List())
+    var args = opts.parse(List("-x"))
     args should be ('empty)
-    results should be ('empty)
-  }    
+    results should have size (1)
+    results should not contain key ("notUsed")
+    results should contain key "expert"
+    results("expert") should be === (true)
+
+    results = Map.empty
+    args = opts.parse(List("--expert"))
+    args should be ('empty)
+    results should have size (1)
+    results should not contain key ("notUsed2")
+    results should contain key "expert"
+    results("expert") should be === (true)
+  }
   
   // ====================================================================================
   // ====================================================================================
@@ -452,8 +464,6 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     thrown.getMessage should startWith (AMBIGUOUS_ARGUMENT)
   }
   
-  
-
   // ====================================================================================
   // ====================================================================================
   it should "detect attempts to add an option for a type with no converter" in {
