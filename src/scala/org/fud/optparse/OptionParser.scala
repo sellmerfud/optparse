@@ -395,19 +395,21 @@ class OptionParser {
 
 object Foo {
   def main(args: Array[String]): Unit = {
-    val opts = new OptionParser
-    opts.banner = "usage: Foo [options]"
-    opts separator ""
-    opts.noArg("-x", "--expert", "Expert Mode") { () => println("Expert Mode")}
-    opts.reqArg("-l", "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
-    opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
-    opts.optArg("-t", "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
-    opts.reqArg("", "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
-    opts.reqArg("-a", "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
-    opts.optArg("-b", "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
-    opts.listArg("-a", "--ages (46,11,...)", "Set ages") { ages: List[Int] => println("Set ages: " + ages)}
+    val cli = new OptionParser {
+      banner = "usage: Foo [options]"
+      separator("")
+      noArg("-x",   "--expert", "Expert Mode") { () => println("Expert Mode")}
+      reqArg("-l",  "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
+      reqArg("-n",  "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
+      optArg("-t",  "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
+      reqArg(""  ,  "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
+      reqArg("-a",  "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
+      optArg("-b",  "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
+      listArg("-a", "--ages (46,11,...)", "Set ages") { ages: List[Int] => println("Set ages: " + ages)}
+    }
+    
     try {
-      println("Args: " + opts.parse(args))
+      println("Args: " + cli.parse(args))
     }
     catch {
       case e: OptionParserException => println(e.getMessage); exit(1)

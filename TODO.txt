@@ -3,5 +3,3 @@ add boolArg("-v", "--verbose", "Verbose output") { v: Boolean => }
 This will allow long switches as --no-verbose to turn off the option.
 
 
-Args that handle comma separated lists ???  Do we need this?  Might as well.
-
