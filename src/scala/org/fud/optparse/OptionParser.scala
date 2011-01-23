@@ -252,8 +252,8 @@ class OptionParser {
         case idx => switches.remove(idx)
       }
     
-    remove(_.short == switch.short)
-    remove(_.long  == switch.long)
+    if (switch.short != "") remove(_.short == switch.short)
+    if (switch.long  != "") remove(_.long  == switch.long)
     switches += switch
   }
   
@@ -398,10 +398,13 @@ object Foo {
     val cli = new OptionParser {
       banner = "usage: Foo [options]"
       separator("")
+      separator("Main options:")
       noArg("-x",   "--expert", "Expert Mode") { () => println("Expert Mode")}
       reqArg("-l",  "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
       reqArg("-n",  "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
       optArg("-t",  "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
+      separator("")
+      separator("Other options:")
       reqArg(""  ,  "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
       reqArg("-a",  "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
       optArg("-b",  "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
