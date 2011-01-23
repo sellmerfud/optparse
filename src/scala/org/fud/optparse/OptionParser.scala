@@ -18,6 +18,7 @@ class OptionParser {
   var auto_help = true   // Set to false if you don't want -h, --help auto added
                          // Or simply add your own switch for either -h, or --help to override.
                          // The default help action will print help and exit(0)
+  var verbose_errors = true  // Use verbose error messages
   
   protected val argv = new ListBuffer[String]
   protected var switches = new ListBuffer[Switch]
@@ -51,7 +52,7 @@ class OptionParser {
   // Define a switch that takes a required argument where the valid values are given by a Map
   def reqArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
-  
+
   // --------------------------------------------------------------------------------------------
   // Define a switch that takes an optional argument
   def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
@@ -64,6 +65,11 @@ class OptionParser {
   // Define a switch that takes an optional argument where the valid values are given by a Map
   def optArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
+  
+    // Define a switch that takes a comma separated list of arguments.
+  def listArg[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+    addSwitch(new ListArgSwitch(getNames(short, long), info, converter(m), func))
+
   
   // --------------------------------------------------------------------------------------------
   // Parse the given command line.  Each token from the command line should be
@@ -118,7 +124,7 @@ class OptionParser {
     val wrapped = { s: String =>
       try { f(s) } 
       catch { 
-        case e: InvalidArgumentException if e.getMessage.isEmpty => throw new InvalidArgument
+        case e: InvalidArgumentException if e.getMessage.isEmpty || !verbose_errors => throw new InvalidArgument
         case e: InvalidArgumentException => throw new InvalidArgument("   (%s)".format(e.getMessage))
       } 
     }
@@ -132,7 +138,9 @@ class OptionParser {
   protected class AmbiguousArgument(m: String) extends OptionParserException("ambiguous argument: " + curr_arg_display + m)
   protected class NeedlessArgument extends OptionParserException("needless argument: " + curr_arg_display)
   protected class InvalidOption extends OptionParserException("invalid option: " + curr_arg_display)
-  protected class AmbiguousOption extends OptionParserException("ambiguous option: " + curr_arg_display)
+  protected class AmbiguousOption(m: String) extends OptionParserException("ambiguous option: " + curr_arg_display + m) {
+    def this() = this("")    
+  }
   
   protected abstract class Token
   
@@ -188,7 +196,21 @@ class OptionParser {
       case Some(a) => func(convert(a))
     }
   }
+
+  protected class OptArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: Option[T] => Unit) extends Switch(n, d) {
+    override val takesArg = true
+    override def process(arg: Option[String]): Unit = func(arg.map(convert))
+  }
   
+  protected class ListArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: List[T] => Unit) extends Switch(n, d) {
+    override val takesArg    = true
+    override val requiresArg = true
+    override def process(arg: Option[String]): Unit = arg match {
+      case None => throw new RuntimeException("Internal error - no arg for ListArgSwitch")
+      case Some(argList) => func(argList.split(",").toList.map(convert))
+    }
+  }
+    
   // Clas to hold a list of valid values. Maps the string representation to it's actual value.
   // Support partial matching on the strings
   protected class ValueList[T](vals: List[(String, T)]) {
@@ -196,7 +218,7 @@ class OptionParser {
     def this(m: Map[String, T]) = this(m.toList)
     
     def get(arg: String): T = {
-      def display(l: List[(String, T)]): String = "    (%s)".format(l.map(_._1).mkString(", "))
+      def display(l: List[(String, T)]): String = if (verbose_errors) "    (%s)".format(l.map(_._1).mkString(", ")) else ""
       vals.filter(_._1.startsWith(arg)).sortWith(_._1.length < _._1.length) match {
         case x :: Nil => x._2
         case x :: xs  => if (x._1 == arg) x._2 else throw new AmbiguousArgument(display(x :: xs))
@@ -215,11 +237,6 @@ class OptionParser {
     }
   }
 
-  protected class OptArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: Option[T] => Unit) extends Switch(n, d) {
-    override val takesArg = true
-    override def process(arg: Option[String]): Unit = func(arg.map(convert))
-  }
-  
   protected class OptArgSwitchWithVals[T](n: Names, d: Seq[String], vals: ValueList[T], func: Option[T] => Unit) extends Switch(n, d) {
     override val takesArg = true
     override def process(arg: Option[String]): Unit = func(arg.map(vals.get))
@@ -306,9 +323,10 @@ class OptionParser {
   // exact match it wins, otherwise and AmbiguousOption exception is thrown
   // Throws InvalidOption if the switch cannot be found
   protected def longSwitch(name: String, arg: Option[String]): SwitchToken = {
+    def display(l: List[Switch]): String = if (verbose_errors) "    (%s)".format(l.map("--" + _.long).mkString(", ")) else ""
     val switch = switches.toList.filter(_.long.startsWith(name)).sortWith(_.long.length < _.long.length) match {
       case x :: Nil => x
-      case x :: xs  => if (x.long == name) x else throw new AmbiguousOption
+      case x :: xs  => if (x.long == name) x else throw new AmbiguousOption(display(x :: xs))
       case Nil => throw new InvalidOption
     }
     SwitchToken(switch, true, arg)
@@ -346,27 +364,29 @@ class OptionParser {
   }
   
   // ==========================================================================================
+  private def errMsg(s: String) = if (verbose_errors) s else ""
+  
   // Define default converters
   addConverter {s: String => s}
   addConverter { s: String => 
-    try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgumentException }
+    try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
   }
   addConverter { s: String => 
-    try { s.toShort } catch { case _: NumberFormatException => throw new InvalidArgumentException }
+    try { s.toShort } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
   }
   addConverter { s: String => 
-    try { s.toLong } catch { case _: NumberFormatException => throw new InvalidArgumentException }
+    try { s.toLong } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
   }
   addConverter { s: String => 
-    try { s.toFloat } catch { case _: NumberFormatException => throw new InvalidArgumentException }
+    try { s.toFloat } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
   }
   addConverter { s: String => 
-    try { s.toDouble } catch { case _: NumberFormatException => throw new InvalidArgumentException }
+    try { s.toDouble } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Double expected")) }
   }
   addConverter { s: String => 
     s.toList match {
       case c :: Nil => c
-      case _ => throw new InvalidArgument
+      case _ => throw new InvalidArgument(errMsg("Char expected"))
     }
   }
   // ==========================================================================================
@@ -376,18 +396,16 @@ class OptionParser {
 object Foo {
   def main(args: Array[String]): Unit = {
     val opts = new OptionParser
-    opts.addConverter { s: String => 
-      try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgumentException("Integer expected") }
-    }
-    
     opts.banner = "usage: Foo [options]"
     opts separator ""
     opts.noArg("-x", "--expert", "Expert Mode") { () => println("Expert Mode")}
     opts.reqArg("-l", "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
     opts.reqArg("-n", "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
     opts.optArg("-t", "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
+    opts.reqArg("", "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
     opts.reqArg("-a", "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
     opts.optArg("-b", "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
+    opts.listArg("-a", "--ages (46,11,...)", "Set ages") { ages: List[Int] => println("Set ages: " + ages)}
     try {
       println("Args: " + opts.parse(args))
     }
