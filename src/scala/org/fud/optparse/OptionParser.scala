@@ -175,6 +175,7 @@ class OptionParser {
     val requiresArg: Boolean = false
     def exactMatch(lname: String) = lname == names.long
     def partialMatch(lname: String) = names.long.startsWith(lname)
+    def negatedMatch(lname: String) = false
     
     // Called when this switch is detected on the command line.  Should handle the
     // invocation of the user's code to process this switch.
@@ -202,7 +203,7 @@ class OptionParser {
     override def exactMatch(lname: String) = lname == names.long || lname == names.longNegated
     override def partialMatch(lname: String) = names.long.startsWith(lname) || names.longNegated.startsWith(lname)
     // Return true if the given lname is a prefix match for our negated name.
-    def negatedMatch(lname: String) = names.longNegated.startsWith(lname)
+    override def negatedMatch(lname: String) = names.longNegated.startsWith(lname)
     
     override def process(arg: Option[String], negated: Boolean): Unit = func(!negated)
   }
@@ -347,10 +348,7 @@ class OptionParser {
   protected def longSwitch(name: String, arg: Option[String]): SwitchToken = {
     def display(l: List[Switch]): String = {
       if (verbose_errors)
-        "    (%s)".format(l.map { s => s  match {
-            case s: BoolSwitch if s.negatedMatch(name) => "--no-" + s.names.long
-            case s => "--" + s.names.long
-          }}.mkString(", "))
+        "    (%s)".format(l.map(s => (if (s.negatedMatch(name)) "--no-" else "--") + s.names.long).mkString(", "))
       else
         ""
     }
@@ -359,11 +357,7 @@ class OptionParser {
       case x :: xs  => if (x.exactMatch(name)) x else throw new AmbiguousOption(display(x :: xs))
       case Nil => throw new InvalidOption
     }
-    val negated = switch match {
-      case s: BoolSwitch => s.negatedMatch(name)
-      case _ => false
-    }
-    SwitchToken(switch, true, arg, negated)
+    SwitchToken(switch, true, arg, switch.negatedMatch(name))
   }
   
   // Look up a swith by the given short name.  Must be an exact match.
