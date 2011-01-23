@@ -5,7 +5,7 @@ package org.fud.optparse
 import collection.mutable.ListBuffer
 
 class OptionParserException(m: String) extends RuntimeException(m)
-// This exception should be thrown by convertion functions upon any error.
+// This exception should be thrown by argument parsers upon any error.
 class InvalidArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
 
 /**
@@ -43,7 +43,7 @@ class OptionParser {
   // --------------------------------------------------------------------------------------------
   // Define a switch that takes a required argument
   def reqArg[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
-    addSwitch(new ArgSwitch(getNames(short, long), info, converter(m), func))
+    addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
   // Define a switch that takes a required argument where the valid values are given by a Seq[]
   def reqArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
@@ -56,7 +56,7 @@ class OptionParser {
   // --------------------------------------------------------------------------------------------
   // Define a switch that takes an optional argument
   def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
-    addSwitch(new OptArgSwitch(getNames(short, long), info, converter(m), func))
+    addSwitch(new OptArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   // Define a switch that takes an optional argument where the valid values are given by a Seq[]
   def optArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
@@ -68,7 +68,7 @@ class OptionParser {
   
     // Define a switch that takes a comma separated list of arguments.
   def listArg[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassManifest[T]): Unit =
-    addSwitch(new ListArgSwitch(getNames(short, long), info, converter(m), func))
+    addSwitch(new ListArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   
   // --------------------------------------------------------------------------------------------
@@ -119,8 +119,9 @@ class OptionParser {
     non_switch_args.toList
   }
   
-  // Register a converter function for the given 
-  def addConverter[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
+  // Register an Argument parser
+  // This will replace any previously added parser for the same argument type 
+  def addArgumentParser[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
     val wrapped = { s: String =>
       try { f(s) } 
       catch { 
@@ -128,7 +129,7 @@ class OptionParser {
         case e: InvalidArgumentException => throw new InvalidArgument("   (%s)".format(e.getMessage))
       } 
     }
-    _converters = (m -> wrapped) :: _converters
+    arg_parsers = (m -> wrapped) :: arg_parsers
   }
     
   protected class ArgumentMissing extends OptionParserException("argument missing: " + curr_arg_display)
@@ -187,27 +188,27 @@ class OptionParser {
     override def process(arg: Option[String]): Unit = func()
   }
   
-  protected class ArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: T => Unit) extends Switch(n, d) {
+  protected class ArgSwitch[T](n: Names, d: Seq[String], parse_arg: String => T, func: T => Unit) extends Switch(n, d) {
     override val takesArg    = true
     override val requiresArg = true
     
     override def process(arg: Option[String]): Unit = arg match {
       case None => throw new RuntimeException("Internal error - no arg for ArgSwitch")
-      case Some(a) => func(convert(a))
+      case Some(a) => func(parse_arg(a))
     }
   }
 
-  protected class OptArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: Option[T] => Unit) extends Switch(n, d) {
+  protected class OptArgSwitch[T](n: Names, d: Seq[String], parse_arg: String => T, func: Option[T] => Unit) extends Switch(n, d) {
     override val takesArg = true
-    override def process(arg: Option[String]): Unit = func(arg.map(convert))
+    override def process(arg: Option[String]): Unit = func(arg.map(parse_arg))
   }
   
-  protected class ListArgSwitch[T](n: Names, d: Seq[String], convert: String => T, func: List[T] => Unit) extends Switch(n, d) {
+  protected class ListArgSwitch[T](n: Names, d: Seq[String], parse_arg: String => T, func: List[T] => Unit) extends Switch(n, d) {
     override val takesArg    = true
     override val requiresArg = true
     override def process(arg: Option[String]): Unit = arg match {
       case None => throw new RuntimeException("Internal error - no arg for ListArgSwitch")
-      case Some(argList) => func(argList.split(",").toList.map(convert))
+      case Some(argList) => func(argList.split(",").toList.map(parse_arg))
     }
   }
     
@@ -306,15 +307,14 @@ class OptionParser {
     Names(short, long, display)
   }
     
-  // A list of registered converters
-  protected var _converters = List[(ClassManifest[_], String => _)]()
+  // A list of registered argument parsers
+  protected var arg_parsers = List[(ClassManifest[_], String => _)]()
   
-  // Look up a converter given a ClassManifest.
+  // Look up an argument parser given a ClassManifest.
   // Throws an exception if not found.
-  protected def converter[T](m: ClassManifest[T]): String => T = {
-    // Check for exact match first then subclass
-    _converters.find(m == _._1).map(_._2.asInstanceOf[String => T]).getOrElse {
-      throw new OptionParserException("No Converter found for " + m)
+  protected def arg_parser[T](m: ClassManifest[T]): String => T = {
+    arg_parsers.find(m == _._1).map(_._2.asInstanceOf[String => T]).getOrElse {
+      throw new OptionParserException("No argument parser found for " + m)
     }
   }
   
@@ -363,30 +363,31 @@ class OptionParser {
     }
   }
   
-  // ==========================================================================================
   private def errMsg(s: String) = if (verbose_errors) s else ""
   
-  // Define default converters
-  addConverter {s: String => s}
-  addConverter { s: String => 
+  // ==========================================================================================
+  // Define default argument parsers
+
+  addArgumentParser {s: String => s}
+  addArgumentParser { s: String => 
     try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
   }
-  addConverter { s: String => 
+  addArgumentParser { s: String => 
     try { s.toShort } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
   }
-  addConverter { s: String => 
+  addArgumentParser { s: String => 
     try { s.toLong } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
   }
-  addConverter { s: String => 
+  addArgumentParser { s: String => 
     try { s.toFloat } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
   }
-  addConverter { s: String => 
+  addArgumentParser { s: String => 
     try { s.toDouble } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Double expected")) }
   }
-  addConverter { s: String => 
+  addArgumentParser { s: String => 
     s.toList match {
       case c :: Nil => c
-      case _ => throw new InvalidArgument(errMsg("Char expected"))
+      case _ => throw new InvalidArgument(errMsg("Single character expected"))
     }
   }
   // ==========================================================================================
