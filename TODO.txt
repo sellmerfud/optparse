@@ -1,5 +1,3 @@
 
-add boolArg("-v", "--verbose", "Verbose output") { v: Boolean => }
-This will allow long switches as --no-verbose to turn off the option.
 
-
+Can we add a generic argument parser that will handle Enumerations?
