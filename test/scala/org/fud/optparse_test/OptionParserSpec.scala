@@ -419,7 +419,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     args = opts.parse(List("-j", "-x")) // Optional arg, should not pick up the -x
     args should be ('empty)
     results should have size (2)
-    results should contain key "gist"
+    results should contain key "jazz"
     results should contain key "expert"
     results("jazz") should be === ("bebop")
     results("expert") should be === (true)
@@ -457,7 +457,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     args = opts.parse(List("--jazz", "-x")) // Optional arg, should not pick up the -x
     args should be ('empty)
     results should have size (2)
-    results should contain key "gist"
+    results should contain key "jazz"
     results should contain key "expert"
     results("jazz") should be === ("bebop")
     results("expert") should be === (true)
@@ -507,14 +507,11 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "zone"
     results("zone") should be === (1)
  
-    results = Map.empty
-    args = opts.parse(List("-z", "four"))
-    args should have length (1)
-    args(0) should be === "four"
-    results should have size (1)
-    results should contain key "zone"
-    results("zone") should be === (1)
- 
+    var thrown = evaluating {
+      args = opts.parse(List("-z", "four"))
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+  
     results = Map.empty
     args = opts.parse(List("-z", "tw"))
     args should be ('empty)
@@ -529,15 +526,13 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "zone"
     results("zone") should be === (3)
  
-    results = Map.empty
-    args = opts.parse(List("-ztx"))
-    args should have length (1)
-    args(0) should be === "tx"
-    results should have size (1)
-    results should contain key "zone"
-    results("zone") should be === (1)
+    thrown = evaluating {
+      args = opts.parse(List("-ztx"))
+    } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+ 
     
-    var thrown = evaluating {
+    thrown = evaluating {
       opts.parse(List("--zone", "t"))
     } should produce [OptionParserException]
     thrown.getMessage should startWith (AMBIGUOUS_ARGUMENT)
