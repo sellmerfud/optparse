@@ -1,3 +1,4 @@
 
+Finish defining unit tests.
 
 Can we add a generic argument parser that will handle Enumerations?

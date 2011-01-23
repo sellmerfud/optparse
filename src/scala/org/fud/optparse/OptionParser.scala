@@ -402,22 +402,35 @@ class OptionParser {
   // ==========================================================================================
   // Define default argument parsers
 
+  // String parser
   addArgumentParser {s: String => s}
+  
+  // Int parser
   addArgumentParser { s: String => 
     try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
   }
+  
+  // Short parser
   addArgumentParser { s: String => 
     try { s.toShort } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
   }
+  
+  // Long parser
   addArgumentParser { s: String => 
     try { s.toLong } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
   }
+  
+  // Float parser
   addArgumentParser { s: String => 
     try { s.toFloat } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
   }
+  
+  // Double parser
   addArgumentParser { s: String => 
     try { s.toDouble } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Double expected")) }
   }
+  
+  // Char parser
   addArgumentParser { s: String => 
     s.toList match {
       case c :: Nil => c
@@ -425,35 +438,32 @@ class OptionParser {
     }
   }
   // ==========================================================================================
-  
 }
 
 object Foo {
   
   def main(args: Array[String]): Unit = {
-    val cli = new OptionParser {
-      banner = "usage: Foo [options]"
-      separator("")
-      separator("Main options:")
-      boolArg("-v", "--verbose", "Verbose output") { v: Boolean => println("Verbose: " + v) }
-      boolArg("-f", "--fast", "Fast mode") { v: Boolean => println("Fast: " + v) }
-      noArg("-x",   "--expert", "Expert Mode") { () => println("Expert Mode")}
-      reqArg("-l",  "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
-      reqArg("-n",  "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
-      optArg("-t",  "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
-      separator("")
-      separator("Other options:")
-      reqArg(""  ,  "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
-      reqArg("-a",  "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
-      optArg("-b",  "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
-      listArg("-a", "--ages (46,11,...)", "Set ages") { ages: List[Int] => println("Set ages: " + ages)}
-    }
+    val file_args = try {
+      new OptionParser {
+        banner = "usage: Foo [options]"
+        separator("")
+        separator("Main options:")
+        boolArg("-v", "--verbose", "Verbose output") { v: Boolean => println("Verbose: " + v) }
+        boolArg("-f", "--fast", "Fast mode") { v: Boolean => println("Fast: " + v) }
+        noArg("-x",   "--expert", "Expert Mode") { () => println("Expert Mode")}
+        reqArg("-l",  "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
+        reqArg("-n",  "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
+        optArg("-t",  "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
+        separator("")
+        separator("Other options:")
+        reqArg(""  ,  "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
+        reqArg("-a",  "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
+        optArg("-b",  "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
+        listArg("-a", "--ages (46,11,...)", "Set ages") { ages: List[Int] => println("Set ages: " + ages)}
+      }.parse(args)
+    }  
+    catch { case e: OptionParserException => println(e.getMessage); exit(1) }
     
-    try {
-      println("Args: " + cli.parse(args))
-    }
-    catch {
-      case e: OptionParserException => println(e.getMessage); exit(1)
-    }
+    println("Args: " + file_args)
   }
 }
