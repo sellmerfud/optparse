@@ -18,6 +18,7 @@ class OptionParser {
   var auto_help = true   // Set to false if you don't want -h, --help auto added
                          // Or simply add your own switch for either -h, or --help to override.
                          // The default help action will print help and exit(0)
+  
   protected val argv = new ListBuffer[String]
   protected var switches = new ListBuffer[Switch]
   
@@ -128,7 +129,7 @@ class OptionParser {
   protected class InvalidArgument(m: String) extends OptionParserException("invalid argument: " + curr_arg_display + m) {
     def this() = this("")
   }
-  protected class AmbiguousArgument extends OptionParserException("ambiguous argument: " + curr_arg_display)
+  protected class AmbiguousArgument(m: String) extends OptionParserException("ambiguous argument: " + curr_arg_display + m)
   protected class NeedlessArgument extends OptionParserException("needless argument: " + curr_arg_display)
   protected class InvalidOption extends OptionParserException("invalid option: " + curr_arg_display)
   protected class AmbiguousOption extends OptionParserException("ambiguous option: " + curr_arg_display)
@@ -194,11 +195,13 @@ class OptionParser {
     def this(l: Seq[T]) = this(l.toList.map(v => (v.toString, v)))
     def this(m: Map[String, T]) = this(m.toList)
     
-    def get(arg: String): T = 
+    def get(arg: String): T = {
+      def display(l: List[(String, T)]): String = "    (%s)".format(l.map(_._1).mkString(", "))
       vals.filter(_._1.startsWith(arg)).sortWith(_._1.length < _._1.length) match {
         case x :: Nil => x._2
-        case x :: xs  => if (x._1 == arg) x._2 else throw new AmbiguousArgument
-        case Nil => throw new InvalidArgument
+        case x :: xs  => if (x._1 == arg) x._2 else throw new AmbiguousArgument(display(x :: xs))
+        case Nil => throw new InvalidArgument(display(vals))
+      }
     }
   }
   
