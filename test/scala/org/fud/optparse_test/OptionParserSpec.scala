@@ -34,7 +34,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   }
   
   case class Foo(s: String)
-  opts.addConverter { s: String => Foo(s) }
+  opts.addArgumentParser { s: String => Foo(s) }
   opts.reqArg("-f", "--foo", "Set Foo") { foo : Foo => results += "foo" -> foo}
   
   opts.noArg("-h", "--help", "Display Help") { () => results += "help" -> true }
@@ -465,7 +465,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
   // ====================================================================================
   // ====================================================================================
-  it should "handle new types" in {
+  it should "handle custom argument parsers" in {
     results = Map.empty
     var args = opts.parse(List("--foo", "46"))
     args should be ('empty)
@@ -540,7 +540,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   
   // ====================================================================================
   // ====================================================================================
-  it should "detect attempts to add an option for a type with no converter" in {
+  it should "detect attempts to add an option for a type with no argument parser" in {
     class SomeClass
     evaluating {
       opts.reqArg("-z", "--zoo", "Set Zoo") { zoo : SomeClass => results += "zoo" -> zoo}
