@@ -278,13 +278,14 @@ class OptionParser {
     switches += switch
   }
   
-  private val ShortSpec   = """-(\S)(?:\s*(.+))?"""r
+  private val ShortSpec   = """-(\S)(?:\s+(.+))?"""r
   private val LongSpec    = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?"""r
   private val LongNegated = """--no-.*"""r
   // Parse the switch names and return the 'fixed' names.
   // Short name: 
   //   - must begin with a single '-'
-  //   - may be followed by an argument name with or without separating space.
+  //   - may only be one character
+  //   - may be followed by an argument name separated by whitespace.
   //        This is for documentation purposes when the help method is called.
   // Long name:
   //   - must begin with two '--'
@@ -392,36 +393,69 @@ class OptionParser {
   }
   
   private def errMsg(s: String) = if (verbose_errors) s else ""
+
+  private val HexNum = """(-)?(?i:0x([0-9a-f]+))""".r
+  private val OctNum = """(-)?0([0-7]+)""".r
+  private def numWithRadix(num: String): (String, Int) = {
+    num match {
+      case HexNum(sign, n) => ((if (sign == null) "" else sign) + n, 16)
+      case OctNum(sign, n) => ((if (sign == null) "" else sign) + n, 8)
+      case _ => (num, 10)
+    }
+  }
   
   // ==========================================================================================
   // Define default argument parsers
+
 
   // String parser
   addArgumentParser {s: String => s}
   
   // Int parser
   addArgumentParser { s: String => 
-    try { s.toInt } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
+    try { 
+      val n = numWithRadix(s)
+      java.lang.Integer.parseInt(n._1, n._2)
+    }  
+    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
   }
   
   // Short parser
   addArgumentParser { s: String => 
-    try { s.toShort } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
+    try {
+      val n = numWithRadix(s)
+      java.lang.Short.parseShort(n._1, n._2)
+    } 
+    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
   }
   
   // Long parser
   addArgumentParser { s: String => 
-    try { s.toLong } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
+    try {
+      val n = numWithRadix(s)
+      java.lang.Long.parseLong(n._1, n._2)
+    }
+    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
   }
   
   // Float parser
   addArgumentParser { s: String => 
-    try { s.toFloat } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
+    try { 
+      val f = s.toFloat
+      if (f == Float.PositiveInfinity || f == Float.NegativeInfinity) throw new NumberFormatException
+      f
+    } 
+    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
   }
   
   // Double parser
   addArgumentParser { s: String => 
-    try { s.toDouble } catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Double expected")) }
+    try { 
+      val d = s.toDouble
+      if (d == Double.PositiveInfinity || d == Double.NegativeInfinity) throw new NumberFormatException
+      d
+    } 
+    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Double expected")) }
   }
   
   // Char parser
