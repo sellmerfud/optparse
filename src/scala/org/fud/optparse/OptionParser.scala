@@ -26,8 +26,16 @@ class OptionParser {
   protected var _curr_arg_display = ""  // Used for error reporting
   def curr_arg_display = _curr_arg_display
   
-  def help = (if (banner.isEmpty) "" else banner + "\n") + switches.mkString("\n")
+  def help: String = {
+    add_auto_help
+    (if (banner.isEmpty) "" else banner + "\n") + switches.mkString("\n")
+  }
   override def toString = help
+  
+  protected def add_auto_help: Unit = {
+    if (auto_help && !switches.exists(s => s.names.short == "h" || s.names.long == "--help"))
+      this.noArg("-h", "--help", "Show this message") { () => println(this); exit(0) }
+  }
   
   // The banner is displayed first by the help/toString methods
   var banner = ""
@@ -100,8 +108,8 @@ class OptionParser {
         None
     }
     
-    if (auto_help && !switches.exists(s => s.names.short == "h" || s.names.long == "--help"))
-      this.noArg("-h", "--help", "Show this message") { () => println(this); exit(0) }
+    add_auto_help
+
     val non_switch_args = new ListBuffer[String]
     argv.clear // Clear any remnants
     argv ++= args
@@ -186,7 +194,7 @@ class OptionParser {
       val sw   = "    " + names
       val sep  = "\n" + " " * 37
       val sep1 = if (sw.length < 37) " " * (37 - sw.length) else sep
-      sw + info.mkString(sep1, sep, "")
+      sw + (if (info.isEmpty) "" else info.mkString(sep1, sep, ""))
     }
   }
   
@@ -465,7 +473,12 @@ class OptionParser {
       case _ => throw new InvalidArgument(errMsg("Single character expected"))
     }
   }
+  
+  // File path parser
+  // Converts argument to a java.io.File.
   // ==========================================================================================
+  addArgumentParser { s: String => new java.io.File(s) }
+  
 }
 
 object Foo {
