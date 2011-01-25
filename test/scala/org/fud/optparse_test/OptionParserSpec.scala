@@ -482,15 +482,94 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     cli.reqArg("-m", "--manifest FILE")  { v: java.io.File => results += "manifest" -> v }
 
     results = Map.empty
-    var args = cli.parse(List("-s", "hello", "-c", "%", "foo", "-m", "/etc/passwd"))
+    var args = cli.parse(List("-c", "%"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === ('%')
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\b"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (8.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\t"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (9.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\n"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (10.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\f"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (12.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\r"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (13.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\033"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (27.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\33"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (27.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\377"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (255.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\u001B"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (27.toChar)
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\u001b"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === (27.toChar)
+    
+    var thrown = evaluating { cli.parse(List("-c", "\\g")) } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+
+    // Unicode must be four hex digits
+    thrown = evaluating { cli.parse(List("-c", "\\uFF")) } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+
+    // Octal must be 1 two or three digits
+    thrown = evaluating { cli.parse(List("-c", "\\01777")) } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+
+    // Octal, if three digits first cannot be greater then 3
+    thrown = evaluating { cli.parse(List("-c", "\\777")) } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+
+    results = Map.empty
+    args = cli.parse(List("-s", "hello", "foo", "-m", "/etc/passwd"))
     args should have size (1)
     args(0) should be === "foo"
-    results should have size (3)
+    results should have size (2)
     results should contain key "string"
-    results should contain key "char"
     results should contain key "manifest"
     results("string") should be === ("hello")
-    results("char") should be === ('%')
     results("manifest") should be === (new java.io.File("/etc/passwd"))
 
     results = Map.empty
@@ -581,7 +660,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
     // Invalid values
     
-    var thrown = evaluating { cli.parse(List("-i", "3.14")) } should produce [OptionParserException]
+    thrown = evaluating { cli.parse(List("-i", "3.14")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
     thrown = evaluating { cli.parse(List("-h", "abc")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
