@@ -23,7 +23,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   "Defining switches" should "fail if both names are empty" in {
     val cli = new OptionParser
     var thrown = evaluating {
-      cli.noArg("", "  ") { () => /* Empty */ }
+      cli.flag("", "  ") { () => /* Empty */ }
     } should produce [OptionParserException]
     thrown.getMessage should be === (BOTH_BLANK)
   }
@@ -33,14 +33,14 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "fail if the short name is not specified correctly" in {
     val cli = new OptionParser
     // Missing leading dash
-    var thrown = evaluating { cli.noArg("a", "") { () => /* Empty */ } } should produce [OptionParserException]
+    var thrown = evaluating { cli.flag("a", "") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_SHORT_NAME)
   
     // Must be only one character
-    thrown = evaluating { cli.noArg("-ab", "") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("-ab", "") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_SHORT_NAME)
     
-    evaluating { cli.noArg("-ab ARG", "") { () => /* Empty */ } } should produce [OptionParserException]
+    evaluating { cli.flag("-ab ARG", "") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_SHORT_NAME)
   }
   
@@ -48,26 +48,26 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
   it should "fail if the long name is not specified correctly" in {
     val cli = new OptionParser
-    var thrown = evaluating { cli.noArg("", "name") { () => /* Empty */ } } should produce [OptionParserException]
+    var thrown = evaluating { cli.flag("", "name") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
     
-    thrown = evaluating { cli.noArg("", "-name") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("", "-name") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
 
-    thrown = evaluating { cli.noArg("", "name ARG") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("", "name ARG") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
     
-    thrown = evaluating { cli.noArg("", "-name ARG") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("", "-name ARG") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
 
-    thrown = evaluating { cli.noArg("", "name=ARG") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("", "name=ARG") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
     
-    thrown = evaluating { cli.noArg("", "-name=ARG") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("", "-name=ARG") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
     
     // --no- prefix is reserved for boolean switches
-    thrown = evaluating { cli.noArg("", "--no-name") { () => /* Empty */ } } should produce [OptionParserException]
+    thrown = evaluating { cli.flag("", "--no-name") { () => /* Empty */ } } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_LONG_NAME)
   }
   
@@ -75,21 +75,21 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
   it should "accept the ARG to long switches in four different forms" in {
     val cli = new OptionParser
-    cli.noArg("", "--name ARG") { () => /* Empty */ }
-    cli.noArg("", "--name [ARG]") { () => /* Empty */ }
-    cli.noArg("", "--name=ARG") { () => /* Empty */ }
-    cli.noArg("", "--name[=ARG]") { () => /* Empty */ }
+    cli.flag("", "--name ARG") { () => /* Empty */ }
+    cli.flag("", "--name [ARG]") { () => /* Empty */ }
+    cli.flag("", "--name=ARG") { () => /* Empty */ }
+    cli.flag("", "--name[=ARG]") { () => /* Empty */ }
   }
   
   // ====================================================================================
 
   it should "pass as long as either name is specified" in {
     val cli = new OptionParser
-    cli.noArg("-a", "") { () => /* Empty */ }
-    cli.noArg("-b ARG", "") { () => /* Empty */ }
-    cli.noArg("", "--bcd") { () => /* Empty */ }
-    cli.noArg("", "--cde ARG") { () => /* Empty */ }
-    cli.noArg("-c", "--cde") { () => /* Empty */ }
+    cli.flag("-a", "") { () => /* Empty */ }
+    cli.flag("-b ARG", "") { () => /* Empty */ }
+    cli.flag("", "--bcd") { () => /* Empty */ }
+    cli.flag("", "--cde ARG") { () => /* Empty */ }
+    cli.flag("-c", "--cde") { () => /* Empty */ }
   }
 
   // ====================================================================================
@@ -98,9 +98,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.noArg("-x", "--notUsed") { () => results += "notUsed" -> true }
-    cli.noArg("-X", "--expert") { () => results += "notUsed2" -> true }
-    cli.noArg("-x", "--expert") { () => results += "expert" -> true }
+    cli.flag("-x", "--notUsed") { () => results += "notUsed" -> true }
+    cli.flag("-X", "--expert") { () => results += "notUsed2" -> true }
+    cli.flag("-x", "--expert") { () => results += "expert" -> true }
 
     var args = cli.parse(List("-x"))
     args should be ('empty)
@@ -125,7 +125,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
     class SomeClass
     evaluating {
-      cli.reqArg("-z", "--zoo") { zoo : SomeClass => results += "zoo" -> zoo}
+      cli.reqd("-z", "--zoo") { zoo : SomeClass => results += "zoo" -> zoo}
     } should produce [RuntimeException]
   }    
   
@@ -138,8 +138,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.noArg("-x", "--expert") { () => results += "expert" -> true }
-    cli.reqArg("-n", "--name NAME") { name: String => results += "name" -> name }
+    cli.flag("-x", "--expert") { () => results += "expert" -> true }
+    cli.reqd("-n", "--name NAME") { name: String => results += "name" -> name }
 
     val args = cli.parse(List())
     args should be ('empty)
@@ -152,8 +152,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.noArg("-x", "--expert") { () => results += "expert" -> true }
-    cli.reqArg("-n", "--name NAME") { name: String => results += "name" -> name }
+    cli.flag("-x", "--expert") { () => results += "expert" -> true }
+    cli.reqd("-n", "--name NAME") { name: String => results += "name" -> name }
 
     var args = cli.parse(List("foo"))
     args should have length (1)
@@ -173,8 +173,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.noArg("-x", "--expert") { () => results += "expert" -> true }
-    cli.boolArg("-t", "--timestamp") { v: Boolean => results += "timestamp" -> v }
+    cli.flag("-x", "--expert") { () => results += "expert" -> true }
+    cli.bool("-t", "--timestamp") { v: Boolean => results += "timestamp" -> v }
 
     // Short
     results = Map.empty
@@ -235,7 +235,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.noArg("-t", "--test") { () => results += "test" -> true }
+    cli.flag("-t", "--test") { () => results += "test" -> true }
     
     var thrown = evaluating { cli.parse(List("-x")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_OPTION)
@@ -251,11 +251,11 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.noArg("", "--text") { () => results += "text" -> true }
-    cli.noArg("", "--test") { () => results += "test" -> true }
-    cli.noArg("", "--list") { () => results += "list" -> true }
-    cli.noArg("", "--nice") { () => results += "nice" -> true }
-    cli.boolArg("", "--quiet") { v => results += "quiet" -> v }
+    cli.flag("", "--text") { () => results += "text" -> true }
+    cli.flag("", "--test") { () => results += "test" -> true }
+    cli.flag("", "--list") { () => results += "list" -> true }
+    cli.flag("", "--nice") { () => results += "nice" -> true }
+    cli.bool("", "--quiet") { v => results += "quiet" -> v }
     
     results = Map.empty
     var args = cli.parse(List("--l", "--tex"))
@@ -295,7 +295,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.boolArg("-t", "--timestamp") { v: Boolean => results += "timestamp" -> v }
+    cli.bool("-t", "--timestamp") { v: Boolean => results += "timestamp" -> v }
     
     results = Map.empty
     var args = cli.parse(List("-t"))
@@ -325,8 +325,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.listArg[String]("-n", "--names") { names => results += "names" -> names }
-    cli.listArg[Int]("-s", "--sizes")    { sizes => results += "sizes" -> sizes }
+    cli.list[String]("-n", "--names") { names => results += "names" -> names }
+    cli.list[Int]("-s", "--sizes")    { sizes => results += "sizes" -> sizes }
     
     results = Map.empty
     var args = cli.parse(List("-nlarry,moe,curly"))
@@ -371,8 +371,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.noArg("-x", "--expert") { () => results += "expert" -> true }
-    cli.boolArg("-t", "--timestamp") { v: Boolean => results += "timestamp" -> v }
+    cli.flag("-x", "--expert") { () => results += "expert" -> true }
+    cli.bool("-t", "--timestamp") { v: Boolean => results += "timestamp" -> v }
 
     var thrown = evaluating { cli.parse(List("--expert=yes")) } should produce [OptionParserException]
     thrown.getMessage should startWith (NEEDLESS_ARGUMENT)
@@ -387,9 +387,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.reqArg[String]("-n NAME", "") { name => results += "name" -> name }
-    cli.noArg("-x", "") { () => results += "expert" -> true }
-    cli.noArg("-t", "") { () => results += "text" -> true }
+    cli.reqd[String]("-n NAME", "") { name => results += "name" -> name }
+    cli.flag("-x", "") { () => results += "expert" -> true }
+    cli.flag("-t", "") { () => results += "text" -> true }
     
     results = Map.empty
     var args = cli.parse(List("-n", "curt", "foo"))
@@ -444,7 +444,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.reqArg("", "--name NAME") { name: String => results += "name" -> name }
+    cli.reqd("", "--name NAME") { name: String => results += "name" -> name }
     
     results = Map.empty
     var args = cli.parse(List("--name", "curt", "foo"))
@@ -472,8 +472,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.reqArg("-s", "--string ARG") { v: String => results += "string" -> v }
-    cli.reqArg("-f", "--file FILE")  { v: java.io.File => results += "file" -> v }
+    cli.reqd("-s", "--string ARG") { v: String => results += "string" -> v }
+    cli.reqd("-f", "--file FILE")  { v: java.io.File => results += "file" -> v }
 
     results = Map.empty
     var args = cli.parse(List("-s", "hello", "foo", "-f", "/etc/passwd"))
@@ -499,7 +499,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
     
-    cli.reqArg("-c", "--char ARG")   { v: Char   => results += "char"   -> v }
+    cli.reqd("-c", "--char ARG")   { v: Char   => results += "char"   -> v }
     
     // Single char
     results = Map.empty
@@ -631,11 +631,11 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.reqArg("-i", "--int ARG")    { v: Int    => results += "int"    -> v }
-    cli.reqArg("-h", "--short ARG")  { v: Short  => results += "short"  -> v }
-    cli.reqArg("-l", "--long ARG")   { v: Long   => results += "long"   -> v }
-    cli.reqArg("-f", "--float ARG")  { v: Float  => results += "float"  -> v }
-    cli.reqArg("-d", "--double ARG") { v: Double => results += "double" -> v }
+    cli.reqd("-i", "--int ARG")    { v: Int    => results += "int"    -> v }
+    cli.reqd("-h", "--short ARG")  { v: Short  => results += "short"  -> v }
+    cli.reqd("-l", "--long ARG")   { v: Long   => results += "long"   -> v }
+    cli.reqd("-f", "--float ARG")  { v: Float  => results += "float"  -> v }
+    cli.reqd("-d", "--double ARG") { v: Double => results += "double" -> v }
 
     results = Map.empty
     var args = cli.parse(List("-i", "2147483647", "-h", "32767", "-l", "9223372036854775807", "-f", "3.4028235E38", "-d", "1.7976931348623157E308"))
@@ -756,7 +756,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.reqArg("-i", "--int ARG")    { v: Int    => results += "int"    -> v }
+    cli.reqd("-i", "--int ARG")    { v: Int    => results += "int"    -> v }
 
     var args = cli.parse(List("-i", "9", "--", "-i", "10"))
     args should have length (2)
@@ -783,7 +783,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.reqArg("-f", "--file ARG")    { v: String  => results += "file" -> v }
+    cli.reqd("-f", "--file ARG")    { v: String  => results += "file" -> v }
 
     var args = cli.parse(List("-"))
     args should have length (1)
@@ -825,8 +825,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.noArg("-x", "")        { () => results += "expert" -> true }
-    cli.optArg("-d [VAL]", "") { dir: Option[String] => results += "dir" -> dir.getOrElse("/tmp")}
+    cli.flag("-x", "")        { () => results += "expert" -> true }
+    cli.optl("-d [VAL]", "") { dir: Option[String] => results += "dir" -> dir.getOrElse("/tmp")}
     
     results = Map.empty
     var args = cli.parse(List("-d", "/etc", "foo"))
@@ -909,8 +909,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.noArg("-x",  "--expert")  { () => results += "expert" -> true }
-    cli.optArg("", "--at [AT]") { at: Option[String] => results += "at" -> at.getOrElse("00:00")}
+    cli.flag("-x",  "--expert")  { () => results += "expert" -> true }
+    cli.optl("", "--at [AT]") { at: Option[String] => results += "at" -> at.getOrElse("00:00")}
 
     results = Map.empty
     var args = cli.parse(List("--at", "1:30", "foo"))
@@ -970,7 +970,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.reqArg("-n",  "--name NAME")  { s: String => results += "name" -> s }
+    cli.reqd("-n",  "--name NAME")  { s: String => results += "name" -> s }
 
     results = Map.empty
     var args = cli.parse(List("--name="))
@@ -986,9 +986,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.noArg("-x",  "--expert")  { () => results += "expert" -> true }
-    cli.reqArg("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
-    cli.optArg("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
+    cli.flag("-x",  "--expert")  { () => results += "expert" -> true }
+    cli.reqd("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
+    cli.optl("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
 
     // Required argument
     results = Map.empty
@@ -1029,9 +1029,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.noArg("-x",  "--expert")  { () => results += "expert" -> true }
-    cli.reqArg("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
-    cli.optArg("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
+    cli.flag("-x",  "--expert")  { () => results += "expert" -> true }
+    cli.reqd("-g", "--gist TEXT", "Set Gist") { gist: String => results += "gist" -> gist }
+    cli.optl("-j", "--jazz [TEXT]", "Set Jazz") { jazz: Option[String] => results += "jazz" -> jazz.getOrElse("bebop")}
 
     // Required argument
     results = Map.empty
@@ -1074,8 +1074,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Foo(s: String)
     cli.addArgumentParser { s: String => Foo(s) }
     
-    cli.reqArg("", "--foo1") { foo : Foo => results += "foo1" -> foo}
-    cli.optArg("", "--foo2") { foo : Option[Foo] => results += "foo2" -> foo.getOrElse(Foo("Default"))}
+    cli.reqd("", "--foo1") { foo : Foo => results += "foo1" -> foo}
+    cli.optl("", "--foo2") { foo : Option[Foo] => results += "foo2" -> foo.getOrElse(Foo("Default"))}
 
     results = Map.empty
     var args = cli.parse(List("--foo1", "46"))
@@ -1105,7 +1105,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.reqArg("-t", "--type (binary, ascii)", List("binary", "ascii", "auto")) { t => results += "type" -> t }
+    cli.reqd("-t", "--type (binary, ascii)", List("binary", "ascii", "auto")) { t => results += "type" -> t }
 
     results = Map.empty
     var args = cli.parse(List("-t", "binary"))
@@ -1135,7 +1135,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
 
-    cli.optArg("-z", "--zone", Map("one" -> 1, "two" -> 2, "three" -> 3)) { z => results += "zone" -> z.getOrElse(1) }
+    cli.optl("-z", "--zone", Map("one" -> 1, "two" -> 2, "three" -> 3)) { z => results += "zone" -> z.getOrElse(1) }
 
     results = Map.empty
     var args = cli.parse(List("-z"))
@@ -1190,15 +1190,15 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "work for switches without args." in {
     val cli = new OptionParser
     cli.auto_help = false
-    cli.noArg("-a", "") { () => }
-    cli.noArg("-b", "", "Help for b") { () => }
-    cli.noArg("-c", "", "Line 1 for c", "Line 2 for c") { () => }
-    cli.noArg("", "--dd") { () => }
-    cli.noArg("", "--eee", "Help for eee") { () => }
-    cli.noArg("", "--ffff", "Line 1 for ffff", "Line 2 for ffff") { () => }
-    cli.noArg("-g", "--ggggg") { () => }
-    cli.noArg("-h", "--hhhhhh", "Help for hhhhhh") { () => }
-    cli.noArg("-i", "--iiiiiii", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { () => }
+    cli.flag("-a", "") { () => }
+    cli.flag("-b", "", "Help for b") { () => }
+    cli.flag("-c", "", "Line 1 for c", "Line 2 for c") { () => }
+    cli.flag("", "--dd") { () => }
+    cli.flag("", "--eee", "Help for eee") { () => }
+    cli.flag("", "--ffff", "Line 1 for ffff", "Line 2 for ffff") { () => }
+    cli.flag("-g", "--ggggg") { () => }
+    cli.flag("-h", "--hhhhhh", "Help for hhhhhh") { () => }
+    cli.flag("-i", "--iiiiiii", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { () => }
 
     cli.help should be === (
     """    -a
@@ -1221,15 +1221,15 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "work for boolean switches." in {
     val cli = new OptionParser
     cli.auto_help = false
-    cli.boolArg("-a", "") { v => }
-    cli.boolArg("-b", "", "Help for b") { v => }
-    cli.boolArg("-c", "", "Line 1 for c", "Line 2 for c") { v => }
-    cli.boolArg("", "--dd") { v => }
-    cli.boolArg("", "--eee", "Help for eee") { v => }
-    cli.boolArg("", "--ffff", "Line 1 for ffff", "Line 2 for ffff") { v => }
-    cli.boolArg("-g", "--ggggg") { v => }
-    cli.boolArg("-h", "--hhhhhh", "Help for hhhhhh") { v => }
-    cli.boolArg("-i", "--iiiiiii", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { v => }
+    cli.bool("-a", "") { v => }
+    cli.bool("-b", "", "Help for b") { v => }
+    cli.bool("-c", "", "Line 1 for c", "Line 2 for c") { v => }
+    cli.bool("", "--dd") { v => }
+    cli.bool("", "--eee", "Help for eee") { v => }
+    cli.bool("", "--ffff", "Line 1 for ffff", "Line 2 for ffff") { v => }
+    cli.bool("-g", "--ggggg") { v => }
+    cli.bool("-h", "--hhhhhh", "Help for hhhhhh") { v => }
+    cli.bool("-i", "--iiiiiii", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { v => }
 
     cli.help should be === (
     """    -a
@@ -1252,15 +1252,15 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "work for switches with required args." in {
     val cli = new OptionParser
     cli.auto_help = false
-    cli.reqArg[Int]("-a ARG", "") { v => }
-    cli.reqArg[Int]("-b VAL", "", "Help for b") { v => }
-    cli.reqArg[Int]("-c VALUE", "", "Line 1 for c", "Line 2 for c") { v => }
-    cli.reqArg[Int]("", "--dd ARG") { v => }
-    cli.reqArg[Int]("", "--eee VAL", "Help for eee") { v => }
-    cli.reqArg[Int]("", "--ffff VALUE", "Line 1 for ffff", "Line 2 for ffff") { v => }
-    cli.reqArg[Int]("-g", "--ggggg=ARG") { v => }
-    cli.reqArg[Int]("-h", "--hhhhhh=VAL", "Help for hhhhhh") { v => }
-    cli.reqArg[Int]("-i", "--iiiiiii=VALUE", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { v => }
+    cli.reqd[Int]("-a ARG", "") { v => }
+    cli.reqd[Int]("-b VAL", "", "Help for b") { v => }
+    cli.reqd[Int]("-c VALUE", "", "Line 1 for c", "Line 2 for c") { v => }
+    cli.reqd[Int]("", "--dd ARG") { v => }
+    cli.reqd[Int]("", "--eee VAL", "Help for eee") { v => }
+    cli.reqd[Int]("", "--ffff VALUE", "Line 1 for ffff", "Line 2 for ffff") { v => }
+    cli.reqd[Int]("-g", "--ggggg=ARG") { v => }
+    cli.reqd[Int]("-h", "--hhhhhh=VAL", "Help for hhhhhh") { v => }
+    cli.reqd[Int]("-i", "--iiiiiii=VALUE", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { v => }
   
     cli.help should be === (
     """    -a ARG
@@ -1283,18 +1283,18 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "work for switches with optional args." in {
     val cli = new OptionParser
     cli.auto_help = false
-    cli.optArg[Int]("-a [ARG]", "") { v => }
-    cli.optArg[Int]("-b [VAL]", "", "Help for b") { v => }
-    cli.optArg[Int]("-c [VALUE]", "", "Line 1 for c", "Line 2 for c") { v => }
-    cli.optArg[Int]("", "--dd [ARG]") { v => }
-    cli.optArg[Int]("", "--eee [VAL]", "Help for eee") { v => }
-    cli.optArg[Int]("", "--ffff [VALUE]", "Line 1 for ffff", "Line 2 for ffff") { v => }
-    cli.optArg[Int]("-g", "--ggggg=[ARG]") { v => }
-    cli.optArg[Int]("-h", "--hhhhhh=[VAL]", "Help for hhhhhh") { v => }
-    cli.optArg[Int]("-i", "--iiiiiii=[VALUE]", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { v => }
-    cli.optArg[Int]("-j", "--jjjjj[=ARG]") { v => }
-    cli.optArg[Int]("-k", "--kkkkkk[=VAL]", "Help for kkkkkk") { v => }
-    cli.optArg[Int]("-l", "--lllllll[=VALUE]", "Line 1 for lllllll", "Line 2 for lllllll") { v => }
+    cli.optl[Int]("-a [ARG]", "") { v => }
+    cli.optl[Int]("-b [VAL]", "", "Help for b") { v => }
+    cli.optl[Int]("-c [VALUE]", "", "Line 1 for c", "Line 2 for c") { v => }
+    cli.optl[Int]("", "--dd [ARG]") { v => }
+    cli.optl[Int]("", "--eee [VAL]", "Help for eee") { v => }
+    cli.optl[Int]("", "--ffff [VALUE]", "Line 1 for ffff", "Line 2 for ffff") { v => }
+    cli.optl[Int]("-g", "--ggggg=[ARG]") { v => }
+    cli.optl[Int]("-h", "--hhhhhh=[VAL]", "Help for hhhhhh") { v => }
+    cli.optl[Int]("-i", "--iiiiiii=[VALUE]", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { v => }
+    cli.optl[Int]("-j", "--jjjjj[=ARG]") { v => }
+    cli.optl[Int]("-k", "--kkkkkk[=VAL]", "Help for kkkkkk") { v => }
+    cli.optl[Int]("-l", "--lllllll[=VALUE]", "Line 1 for lllllll", "Line 2 for lllllll") { v => }
   
     cli.help should be === (
     """    -a [ARG]
@@ -1321,8 +1321,8 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "use the ARG info from the long name if it has been specified for both names." in {
     val cli = new OptionParser
     cli.auto_help = false
-    cli.reqArg[Int]("-a ARG", "--apple VALUE") { v => }
-    cli.optArg[Int]("-b [ARG]", "--box [VALUE]") { v => }
+    cli.reqd[Int]("-a ARG", "--apple VALUE") { v => }
+    cli.optl[Int]("-b [ARG]", "--box [VALUE]") { v => }
     
     cli.help should be === (
     """    -a, --apple VALUE
@@ -1338,16 +1338,16 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     
     cli.banner = "testapp [options]"
     cli separator ""
-    cli.noArg("-a", "--apple") { () => }
-    cli.noArg("-b", "--best", "Pick best option") { () => }
-    cli.noArg("-c", "--cat", "Cat option", "  more cat info") { () => }
-    cli.reqArg("-d ARG", "", "dddd dddd") { v: String => }
+    cli.flag("-a", "--apple") { () => }
+    cli.flag("-b", "--best", "Pick best option") { () => }
+    cli.flag("-c", "--cat", "Cat option", "  more cat info") { () => }
+    cli.reqd("-d ARG", "", "dddd dddd") { v: String => }
     cli separator ""
     cli separator "More options:"
       // Arg for long name overrides that from short!
-    cli.reqArg("-e EEE", "--extra ARG", "Extra stuff") { v: String => }
-    cli.reqArg("-f", "--file=FILE", "File name") { file: java.io.File => }
-    cli.reqArg[String]("", "--goo=ARG", "Goo help") { v => }
+    cli.reqd("-e EEE", "--extra ARG", "Extra stuff") { v: String => }
+    cli.reqd("-f", "--file=FILE", "File name") { file: java.io.File => }
+    cli.reqd[String]("", "--goo=ARG", "Goo help") { v => }
     
     
     cli.help should be === (

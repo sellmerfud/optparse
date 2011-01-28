@@ -8,8 +8,8 @@ import collection.mutable.ListBuffer
  * == Overview ==
  * OptionParser is a class that handles the parsing of switches and arguments on the command line.
  * It is based on the Ruby OptionParser class that is part of the standard Ruby library. It supports
- * POSIX style short and long option switches. By using closures when defining command line switches
- * your code becomes much easier to write and maintain.  
+ * POSIX style short option switches as well as GNU style long option switches.
+ * By using closures when defining command line switches your code becomes much easier to write and maintain.  
  *
  * == Features ==
  * <ul>
@@ -30,10 +30,10 @@ import collection.mutable.ListBuffer
  * expected type. {{{
  * var revision = 0
  * val cli = new OptionParser
- * cli.reqArg("-r", "--revision NUM", "Choose revision") { v: Int => revision = v }
+ * cli.reqd[Int]("-r", "--revision NUM", "Choose revision") { v => revision = v }
  * val args = cli.parse(List("-r", "9"))
  * }}}
- * The `reqArg()` function defines a switch that takes a required argument.  In this case we have
+ * The `reqd()` function defines a switch that takes a required argument.  In this case we have
  * specified that we expect the argument value to be an `Int`.  If the user enters a value that
  * is not a valid integer then an [[org.fud.optparse.OptionParserException]] is thrown with an appropriate error 
  * message.  If the value is valid then our supplied function is called with the integer value.
@@ -67,7 +67,7 @@ import collection.mutable.ListBuffer
  * 
  * There is a boolean switch that does not accept a command line argument but may be negated
  * when using the long name by preceding the name with `no-`.  For example: {{{
- *  cli.boolArg("-t", "--timestamp", "Generate a timestamp") { v => if (v) generateTimestamp() }
+ *  cli.bool("-t", "--timestamp", "Generate a timestamp") { v => if (v) generateTimestamp() }
  *
  *   can be specified on the command line as:
  *     -t                <== function called with v == true
@@ -89,22 +89,22 @@ import collection.mutable.ListBuffer
  * You can define switches that take no arguments, an optional argument, or a required argument.
  * {{{
  * - No Argument
- *       cli.noArg("-x",  "--expert", "Description") { () => ... }
+ *       cli.flag("-x", "--expert", "Description") { () => ... }
  * - Boolean
- *       cli.boolArg("-t",  "--timestamp", "Description") { v: Boolean => ... }
+ *       cli.bool("-t", "--timestamp", "Description") { v: Boolean => ... }
  * - Required Argument 
- *       cli.reqArg("-n",  "--name=NAME", "Description") { v: String => ... }
+ *       cli.reqd("-n", "--name=NAME", "Description") { v: String => ... }
  * - Optional Argument 
- *       cli.optArg("-d",  "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
+ *       cli.optl("-d", "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
  * - Comma Separated List 
- *       cli.ListArg("-b",  "--branches=B1,B2,B3", "Description") { v: List[String] => ... }
+ *       cli.list("-b", "--branches=B1,B2,B3", "Description") { v: List[String] => ... }
  * }}}
  *
  * == Limiting Values ==
  * For switches that take arguments, either required or optional, you can specify a list of
  * acceptable values. {{{
  * def setColor(c: String) = ...
- * cli.reqArg("", "--color COLOR", List("red", "green", "blue")) { v => setColor(v) }
+ * cli.reqd[String]("", "--color COLOR", List("red", "green", "blue")) { v => setColor(v) }
  * }}}
  * Here if the user enters `--color purple` on the command line an [[org.fud.optparse.OptionParserException]] is
  * thrown.  The exception message will display the accepable values.  Also the user can enter
@@ -120,10 +120,11 @@ import collection.mutable.ListBuffer
  * val green = new Color("#00FF00")
  * val blue  = new Color("#0000FF")
  * def setColor(c: Color) = ...
- * cli.optArg("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v => setColor(v) }
+ * cli.optl("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v => setColor(v.getOrElse(red)) }
  * }}}
  * Notice here that we did not have to specify the type of the function parameter `v` because the
- * compiler can infer the type from the `Map` parameter.
+ * compiler can infer the type from the `Map` parameter. And we specified that the argument is optional,
+ * the type of `v` is `Option[Color]`.
  *
  * == Banner, Separators and Help Text ==
  * You can specify a banner which will be the first line displayed in the help text. You can also
@@ -132,12 +133,12 @@ import collection.mutable.ListBuffer
  * cli.banner = "coolapp [Options] file..."
  * cli separator ""
  * cli separator "Main Options:"
- * cli.noArg("-f", "--force", "Force file creation") { () => ... }
- * cli.reqArg("-n NAME", "", "Specify a name") { () => ... }
+ * cli.flag("-f", "--force", "Force file creation") { () => ... }
+ * cli.reqd("-n NAME", "", "Specify a name") { v: String => ... }
  * cli separator ""
  * cli separator "Other Options:"
- * cli.optArg("", "--backup[=NAME]", "Make a backup", "--> NAME defaults to 'backup'") { v: Option[String] => ... }
- * cli.boolArg("-t", "--timestamp", "Create a timestamp") { () => ... }
+ * cli.optl("", "--backup[=NAME]", "Make a backup", "--> NAME defaults to 'backup'") { v: Option[String] => ... }
+ * cli.bool("-t", "--timestamp", "Create a timestamp") { () => ... }
  * println(cli)  // or println(cli.help)
  * 
  * Would print the following:
@@ -234,25 +235,25 @@ import collection.mutable.ListBuffer
  *         banner = "coolapp [options] file..."
  *         separator("")
  *         separator("Options:")
- *         boolArg("-q", "--quiet",           "Do not write to stdout.") 
+ *         bool("-q", "--quiet",           "Do not write to stdout.") 
  *           { v => options += 'quiet -> v }
  *
- *         noArg  ("-x", "",                  "Use expert mode")
+ *         flag("-x", "",                  "Use expert mode")
  *           { () => options += 'expert -> true }
  *
- *         reqArg ("-n <name>", "",           "Enter you name.")
- *           { v: String => options += 'name -> v }
+ *         reqd[String]("-n <name>", "",           "Enter you name.")
+ *           { v => options += 'name -> v }
  *
- *         reqArg ("-l", "--lib=<lib>",       "Specify a library. Can be used mutiple times.")
- *           { v: File => libs = v :: libs }
+ *         reqd[File]("-l", "--lib=<lib>",       "Specify a library. Can be used mutiple times.")
+ *           { v => libs = v :: libs }
  *
- *         reqArg ("-d", "--date <date>",     "Enter date in mm-dd-yyyy format.")
- *           { v: Date => options += 'date -> v }
+ *         reqd[Date]("-d", "--date <date>",     "Enter date in mm-dd-yyyy format.")
+ *           { v => options += 'date -> v }
  *
- *         reqArg ("-t", "--type=<type>", List("ascii", "binary"), "Set the data type. (ascii, binary)") 
- *           { v: String => options += 'type -> v }
+ *         reqd[String]("-t", "--type=<type>", List("ascii", "binary"), "Set the data type. (ascii, binary)") 
+ *           { v => options += 'type -> v }
  *
- *         optArg ("-b", "--base[=<commit>]", "Set the base commit. Default is HEAD.")
+ *         optl[String]("-b", "--base[=<commit>]", "Set the base commit. Default is HEAD.")
  *           { v: Option[String] => options += 'base -> v.getOrElse("HEAD") }
  *       }.parse(args)
  *     }
@@ -317,7 +318,7 @@ class OptionParser {
   
   protected def add_auto_help: Unit = {
     if (auto_help && !switches.exists(s => s.names.short == "h" || s.names.long == "--help"))
-      this.noArg("-h", "--help", "Show this message") { () => println(this); exit(0) }
+      this.flag("-h", "--help", "Show this message") { () => println(this); exit(0) }
   }
   
   /** Set the banner that is displayed as the first line of the help text. */
@@ -329,42 +330,42 @@ class OptionParser {
   def separator(text: String) = addSwitch(new Separator(text))
   
   /** Define a switch that takes no arguments. */
-  def noArg(short: String, long: String, info: String*)(func: () => Unit): Unit =
+  def flag(short: String, long: String, info: String*)(func: () => Unit): Unit =
     addSwitch(new NoArgSwitch(getNames(short, long), info, func))
 
   /**
    * Define a boolean switch.  
    * This switch takes no arguments.  The long form of the switch may be prefixed with no- to negate the switch.
    * For example a switch with long name  --expert could be specified as --no-expert on the command line. */
-  def boolArg(short: String, long: String, info: String*)(func: Boolean => Unit): Unit =
+  def bool(short: String, long: String, info: String*)(func: Boolean => Unit): Unit =
     addSwitch(new BoolSwitch(getNames(short, long, true), info, func))
 
   /** Define a switch that takes a required argument. */
-  def reqArg[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+  def reqd[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
   /**  Define a switch that takes a required argument where the valid values are given by a Seq[]. */
-  def reqArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes a required argument where the valid values are given by a Map. */
-  def reqArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes an optional argument. */
-  def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def optl[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   /** Define a switch that takes an optional argument where the valid values are given by a Seq[]. */
-  def optArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes an optional argument where the valid values are given by a Map. */
-  def optArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes a comma separated list of arguments. */
-  def listArg[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def list[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ListArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   
