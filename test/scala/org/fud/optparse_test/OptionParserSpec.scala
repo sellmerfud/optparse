@@ -468,25 +468,47 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
   // ====================================================================================
 
-  it should "handle switches all of the built in argument types" in {
+  it should "handle switches with String and File arguments" in {
     val cli = new OptionParser
     var results: Map[String, Any] = Map.empty
-
+    
     cli.reqArg("-s", "--string ARG") { v: String => results += "string" -> v }
-    cli.reqArg("-i", "--int ARG")    { v: Int    => results += "int"    -> v }
-    cli.reqArg("-h", "--short ARG")  { v: Short  => results += "short"  -> v }
-    cli.reqArg("-l", "--long ARG")   { v: Long   => results += "long"   -> v }
-    cli.reqArg("-f", "--float ARG")  { v: Float  => results += "float"  -> v }
-    cli.reqArg("-d", "--double ARG") { v: Double => results += "double" -> v }
-    cli.reqArg("-c", "--char ARG")   { v: Char   => results += "char"   -> v }
-    cli.reqArg("-m", "--manifest FILE")  { v: java.io.File => results += "manifest" -> v }
+    cli.reqArg("-f", "--file FILE")  { v: java.io.File => results += "file" -> v }
 
+    results = Map.empty
+    var args = cli.parse(List("-s", "hello", "foo", "-f", "/etc/passwd"))
+    args should have size (1)
+    args(0) should be === "foo"
+    results should have size (2)
+    results should contain key "string"
+    results should contain key "file"
+    results("string") should be === ("hello")
+    results("file") should be === (new java.io.File("/etc/passwd"))
+
+    results = Map.empty
+    args = cli.parse(List("-f/etc/passwd"))
+    args should be ('empty)
+    results should have size (1)
+    results should contain key "file"
+    results("file") should be === (new java.io.File("/etc/passwd"))
+  }
+
+  // ====================================================================================
+
+  it should "handle switches with Char arguments" in {
+    val cli = new OptionParser
+    var results: Map[String, Any] = Map.empty
+    
+    cli.reqArg("-c", "--char ARG")   { v: Char   => results += "char"   -> v }
+    
+    // Single char
     results = Map.empty
     var args = cli.parse(List("-c", "%"))
     args should be ('empty)
     results should contain key "char"
     results("char") should be === ('%')
 
+    // Control characters
     results = Map.empty
     args = cli.parse(List("-c", "\\b"))
     args should be ('empty)
@@ -517,6 +539,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "char"
     results("char") should be === (13.toChar)
 
+    // Octal codes
     results = Map.empty
     args = cli.parse(List("-c", "\\033"))
     args should be ('empty)
@@ -535,6 +558,38 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "char"
     results("char") should be === (255.toChar)
 
+    // Hex codes
+    results = Map.empty
+    args = cli.parse(List("-c", "\\xA"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === ('\n')
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\X0A"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === ('\n')
+
+    results = Map.empty
+    args = cli.parse(List("-c", "é"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === ('é')
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\xe9"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === ('é')
+
+    results = Map.empty
+    args = cli.parse(List("-c", "\\u00e9"))
+    args should be ('empty)
+    results should contain key "char"
+    results("char") should be === ('é')
+
+    // Unicode
     results = Map.empty
     args = cli.parse(List("-c", "\\u001B"))
     args should be ('empty)
@@ -547,11 +602,10 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "char"
     results("char") should be === (27.toChar)
     
-    var thrown = evaluating { cli.parse(List("-c", "\\g")) } should produce [OptionParserException]
+    var thrown = evaluating { cli.parse(List("-c", "abc")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
-
-    // Unicode must be four hex digits
-    thrown = evaluating { cli.parse(List("-c", "\\uFF")) } should produce [OptionParserException]
+    
+    thrown = evaluating { cli.parse(List("-c", "\\g")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
 
     // Octal must be 1 two or three digits
@@ -562,25 +616,29 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     thrown = evaluating { cli.parse(List("-c", "\\777")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
 
-    results = Map.empty
-    args = cli.parse(List("-s", "hello", "foo", "-m", "/etc/passwd"))
-    args should have size (1)
-    args(0) should be === "foo"
-    results should have size (2)
-    results should contain key "string"
-    results should contain key "manifest"
-    results("string") should be === ("hello")
-    results("manifest") should be === (new java.io.File("/etc/passwd"))
+    // Hex, cannot be more than 2 chars
+    thrown = evaluating { cli.parse(List("-c", "\\x1FF")) } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+
+    // Unicode must be four hex digits
+    thrown = evaluating { cli.parse(List("-c", "\\uFF")) } should produce [OptionParserException]
+    thrown.getMessage should startWith (INVALID_ARGUMENT)
+  }
+  
+  // ====================================================================================
+
+  it should "handle switches with numeric argument types" in {
+    val cli = new OptionParser
+    var results: Map[String, Any] = Map.empty
+
+    cli.reqArg("-i", "--int ARG")    { v: Int    => results += "int"    -> v }
+    cli.reqArg("-h", "--short ARG")  { v: Short  => results += "short"  -> v }
+    cli.reqArg("-l", "--long ARG")   { v: Long   => results += "long"   -> v }
+    cli.reqArg("-f", "--float ARG")  { v: Float  => results += "float"  -> v }
+    cli.reqArg("-d", "--double ARG") { v: Double => results += "double" -> v }
 
     results = Map.empty
-    args = cli.parse(List("-m/etc/passwd"))
-    args should be ('empty)
-    results should have size (1)
-    results should contain key "manifest"
-    results("manifest") should be === (new java.io.File("/etc/passwd"))
-
-    results = Map.empty
-    args = cli.parse(List("-i", "2147483647", "-h", "32767", "-l", "9223372036854775807", "-f", "3.4028235E38", "-d", "1.7976931348623157E308"))
+    var args = cli.parse(List("-i", "2147483647", "-h", "32767", "-l", "9223372036854775807", "-f", "3.4028235E38", "-d", "1.7976931348623157E308"))
     args should be ('empty)
     results should have size (5)
     results should contain key "int"
@@ -660,7 +718,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
     // Invalid values
     
-    thrown = evaluating { cli.parse(List("-i", "3.14")) } should produce [OptionParserException]
+    var thrown = evaluating { cli.parse(List("-i", "3.14")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
     thrown = evaluating { cli.parse(List("-h", "abc")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
@@ -669,8 +727,6 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     thrown = evaluating { cli.parse(List("-f", "abc")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
     thrown = evaluating { cli.parse(List("-d", "abc")) } should produce [OptionParserException]
-    thrown.getMessage should startWith (INVALID_ARGUMENT)
-    thrown = evaluating { cli.parse(List("-c", "abc")) } should produce [OptionParserException]
     thrown.getMessage should startWith (INVALID_ARGUMENT)
     
     // Values out of range
