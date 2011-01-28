@@ -771,12 +771,14 @@ class OptionParser {
   // \f	: form feed FF
   // \r	: carriage return CR
   //
-  // \ N N N  where NNN where NNN are there octal digits defining an ASCII character code. (000 - 377) 
+  // \ N N N  where NNN where NNN are there octal digits defining an ASCII character code (000 - 377).
+  // \ x NN  where NN are hex digits defining an ASCII character code (00 - FF).
   // \ u N N N N  where NNNN are four hex digits defining a UNICODE character code.
   //
   // Note that when passing these from most shells you will have to escape the backslash!
   private val SINGLE  = "(.)".r
   private val OCTAL   = """\\([0-3][0-7]{2}|[0-7]{1,2})""".r
+  private val HEX     = """\\[xX]([0-9a-fA-F]{1,2})""".r
   private val UNICODE = """\\u([0-9a-fA-F]{4})""".r
   addArgumentParser[Char] { arg => 
     import java.lang.Integer
@@ -786,8 +788,9 @@ class OptionParser {
       case "\\n"			=> '\u000a' // LF - linefeed
       case "\\f"			=> '\u000c' // FF - form feed
       case "\\r"			=> '\u000d' // CR - carriage return
-      case UNICODE(s) => Integer.parseInt(s, 16).toChar
       case OCTAL(s)   => Integer.parseInt(s, 8).toChar
+      case HEX(s)     => Integer.parseInt(s, 16).toChar
+      case UNICODE(s) => Integer.parseInt(s, 16).toChar
       case SINGLE(s)  => s(0)
       case _ => throw new InvalidArgument(errMsg("Single character expected"))
     }
