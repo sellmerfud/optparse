@@ -88,14 +88,18 @@ import collection.mutable.ListBuffer
  * == Switch Types == 
  * You can define switches that take no arguments, an optional argument, or a required argument.
  * {{{
- * - No Argument
+ * - Flag
  *       cli.flag("-x", "--expert", "Description") { () => ... }
+ *
  * - Boolean
  *       cli.bool("-t", "--timestamp", "Description") { v: Boolean => ... }
+ *
  * - Required Argument 
  *       cli.reqd("-n", "--name=NAME", "Description") { v: String => ... }
+ *
  * - Optional Argument 
  *       cli.optl("-d", "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
+ *
  * - Comma Separated List 
  *       cli.list("-b", "--branches=B1,B2,B3", "Description") { v: List[String] => ... }
  * }}}
