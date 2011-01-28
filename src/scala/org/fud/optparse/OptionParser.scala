@@ -1,35 +1,318 @@
 
 package org.fud.optparse
 
-
+import java.io.File
 import collection.mutable.ListBuffer
 
-class OptionParserException(m: String) extends RuntimeException(m)
-// This exception should be thrown by argument parsers upon any error.
-class InvalidArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
-
 /**
- * Option parser class based on Ruby class of same name.
- * Support command line parsing using POSIX style short and long arguments.
-*/
+ * == Overview ==
+ * OptionParser is a class that handles the parsing of switches and arguments on the command line.
+ * It is based on the Ruby OptionParser class that is part of the standard Ruby library. It supports
+ * POSIX style short and long option switches. By using closures when defining command line switches
+ * your code becomes much easier to write and maintain.  
+ *
+ * == Features ==
+ * <ul>
+ * <li>The argument specification and the code to handle it are written in the same place.</li>
+ * <li>Automatically formats a help summary</li>
+ * <li>Supports both short (-q) and long (--quiet) switches.</li>
+ * <li>Long switch names can be abbreviated on the command line.</li>
+ * <li>Switch arguments are fully typed so your code does not have to parse and covert them.</li>
+ * <li>Switch arguments can be restricted to a certain set of values.</li>
+ * <li>You can easily define your own argument parsers and/or replace the default ones.</li>
+ * </ul>
+ *
+ * == Defining Switches ==
+ * You define a switch by supplying its name(s), description, and a function that will be 
+ * called each time the switch is detected in the list of command line arguments.
+ * Your function has the type `{ value: T => Unit }`.  You supply the type for `T` and the framework
+ * will select the appropriate parser and call your function with the value converted to your
+ * expected type. {{{
+ * var revision = 0
+ * val cli = new OptionParser
+ * cli.reqArg("-r", "--revision NUM", "Choose revision") { v: Int => revision = v }
+ * val args = cli.parse(List("-r", "9"))
+ * }}}
+ * The `reqArg()` function defines a switch that takes a required argument.  In this case we have
+ * specified that we expect the argument value to be an `Int`.  If the user enters a value that
+ * is not a valid integer then an [[org.fud.optparse.OptionParserException]] is thrown with an appropriate error 
+ * message.  If the value is valid then our supplied function is called with the integer value.
+ * Here we simply save the value in a variable.  Anything encountered on the command line that
+ * is not a switch or an argument to a switch is returned in a list by the parse function.
+ *
+ * == Switch Names ==
+ * A switch may have a short name, a long name, or both.
+ *
+ * Short names may be specified as a single character preceded by a single dash.  You may optionally
+ * append an argument name separated by a space.  The argument name is only for documentation
+ * purposes and is displayed with the help text. {{{
+ *   -t           <== no argument
+ *   -t ARG       <== required argument
+ *   -t [VAL]     <== optional argument
+ * }}}
+ * Long names may be any number of characters and are preceded by two dashes. You may optionally
+ * append an argument name.  The argument name may be separated by a space or by an equals sign.
+ * This will affect how the name is displayed in the help text. {{{
+ *   --quiet
+ *   --revision REV
+ *   --revision=REV
+ *   --start-date [TODAY] 
+ *   --start-date=[TODAY] 
+ *   --start-date[=TODAY] 
+ * }}}
+ * Notice that in the case of an optional parameter you may put the equal sign inside or outside
+ * the bracket.  Again this only affects how it is dispalyed in the help message.  If you specify
+ * an argument name with both the short name and the long name, the one specified with the long
+ * name is used.
+ * 
+ * There is a boolean switch that does not accept a command line argument but may be negated
+ * when using the long name by preceding the name with `no-`.  For example: {{{
+ *  cli.boolArg("-t", "--timestamp", "Generate a timestamp") { v => if (v) generateTimestamp() }
+ *
+ *   can be specified on the command line as:
+ *     -t                <== function called with v == true
+ *     --timestamp       <== function called with v == true
+ *     --no-timestamp    <== function called with v == false
+ *     --no-t            <== function called with v == false  (using partial name)
+ * }}}
+ * Notice that you only specify the positive form of the name when defining the switch. The help 
+ * text for this switch looks like this: {{{
+ *    -t, --[no-]timestamp            Generate a timestamp
+ * }}}
+ * == Special Tokens ==
+ * <ul>
+ * <li>`--` is iterpreted as the ''end of switches''.  When encountered no following arguments on the
+ * command line will be treated as switches.</li>
+ * <li>`-` is interpreted as a normal argument and not a switch.  It is commonly used to indicate `stdin`.</li>
+ * </ul>
+ * == Switch Types == 
+ * You can define switches that take no arguments, an optional argument, or a required argument.
+ * {{{
+ * - No Argument
+ *       cli.noArg("-x",  "--expert", "Description") { () => ... }
+ * - Boolean
+ *       cli.boolArg("-t",  "--timestamp", "Description") { v: Boolean => ... }
+ * - Required Argument 
+ *       cli.reqArg("-n",  "--name=NAME", "Description") { v: String => ... }
+ * - Optional Argument 
+ *       cli.optArg("-d",  "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
+ * - Comma Separated List 
+ *       cli.ListArg("-b",  "--branches=B1,B2,B3", "Description") { v: List[String] => ... }
+ * }}}
+ *
+ * == Limiting Values ==
+ * For switches that take arguments, either required or optional, you can specify a list of
+ * acceptable values. {{{
+ * def setColor(c: String) = ...
+ * cli.reqArg("", "--color COLOR", List("red", "green", "blue")) { v => setColor(v) }
+ * }}}
+ * Here if the user enters `--color purple` on the command line an [[org.fud.optparse.OptionParserException]] is
+ * thrown.  The exception message will display the accepable values.  Also the user can enter
+ * partial values. {{{
+ * coolapp --color r     // <==  Will be interpreted as red
+ * }}}
+ * If the value entered matches two or more of the acceptable values then an [[org.fud.optparse.OptionParserException]] is
+ * thrown with a messge indicating that the value was ambiguous and displays the matched values.
+ * Also note that you can pass a `Map` instead of a `List` if you need to map string values to
+ * some other type. {{{
+ * class Color(rgb: String)
+ * val red   = new Color("#FF0000")
+ * val green = new Color("#00FF00")
+ * val blue  = new Color("#0000FF")
+ * def setColor(c: Color) = ...
+ * cli.optArg("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v => setColor(v) }
+ * }}}
+ * Notice here that we did not have to specify the type of the function parameter `v` because the
+ * compiler can infer the type from the `Map` parameter.
+ *
+ * == Banner, Separators and Help Text ==
+ * You can specify a banner which will be the first line displayed in the help text. You can also
+ * defined separators to display information between the switches in the help text. {{{
+ * val cli = OptionParser
+ * cli.banner = "coolapp [Options] file..."
+ * cli separator ""
+ * cli separator "Main Options:"
+ * cli.noArg("-f", "--force", "Force file creation") { () => ... }
+ * cli.reqArg("-n NAME", "", "Specify a name") { () => ... }
+ * cli separator ""
+ * cli separator "Other Options:"
+ * cli.optArg("", "--backup[=NAME]", "Make a backup", "--> NAME defaults to 'backup'") { v: Option[String] => ... }
+ * cli.boolArg("-t", "--timestamp", "Create a timestamp") { () => ... }
+ * println(cli)  // or println(cli.help)
+ * 
+ * Would print the following:
+ * coolapp [Options] file...
+ *
+ * Main Options:
+ *     -f, --force                  Force file creation
+ *     -n NAME                      Specify a name
+ *
+ * Other Options:
+ *         --backup[=FILE]          Make a backup
+ *                                  --> FILE defaults to 'backup'
+ *     -t, --[no-]timestamp         Create a timestamp
+ *     -h, --help                   Show this message
+ * }}}
+ * Where did the `-h, --help` entry come from?  By default the `-h` switch is added automatically.
+ * The function associated with it will print the help text to `stdout` and call `exit(0)`.  
+ * You can define your own help switch by simply defining a switch with either or both of the
+ * names `-h`, `--help`.  You can also turn off the auto help altogether.
+ *
+ * == How Short Switches Are Parsed == 
+ * Short switches encountered on the command line are interpreted as follows:
+ * {{{
+ * Assume that the following switches have been defined:
+ *    -t, --text   (Takes no argument) 
+ *    -v           (Takes no argument) 
+ *    -f FILE      (Requires an argument) 
+ *    -b [OPT]     (Takes an optional argument) 
+ *
+ * Switches that do not accept arguments may be specified separately or may be concatenated together:
+ *    -tv  ==  -t -v
+ *
+ * A switch that takes an argument may be concatenated to one or more switches that do not take 
+ * arguments as long as it is the last switch in the group:
+ *     -tvf foo.tar  ==  -t -v -f foo.tar
+ *     -tfv foo.tar  ==  -t -f v foo.tar  (v is the argument value for the -f switch)
+ *
+ * The argument for a switch may be specified with or without intervening spaces:
+ *     -ffoo.tar  == -f foo.tar
+ *
+ * For arguments separated by space, switches with required arguments are greedy while those that take
+ * optional arguments are not. They will ignore anything that looks like a another switch.
+ *    -v -f -t       <-- The -f option is assigned the value "-t"
+ *    -v -f -text    <-- The -f option is assigned the value "-text"
+ *    -v -f --text   <-- The -f option is assigned the value "--text"
+ *
+ *    -v -b t        <-- The -b option is assigned the value "t"
+ *    -v -b -t       <-- The -b option is interpreted without an argument
+ *    -v -b -text    <-- The -b option is interpreted without an argument
+ *    -v -b --text   <-- The -b option is interpreted without an argument
+ *    -v -b-text     <-- The -b option is assigned the value "-text" (no intervening space)
+ * }}}
+ * == How Long Switches Are Parsed == 
+ * Long swithes encountered on the command line are interpreted as follows:
+ * {{{
+ * Assume that the following switches have been defined:
+ *    --timestamp       (Boolean - takes no argument) 
+ *    --file FILE       (Requires an argument) 
+ *    --backup[=BACKUP] (Takes an optional argument) 
+ *
+ * The argument for a switch may be joined by and equals sign or may be separated by space:
+ *     --file=foo.tar == --file foo.tar
+ *     --backup=data.bak == --backup data.bak
+ *
+ * For arguments separated by space, switches with required arguments are greedy while those that take
+ * optional arguments are not. They will ignore anything that looks like a another switch. See the
+ * discussion of short switches above for an example.  The behavior for long switches is identical.
+ *
+ * Boolean switches may be negated.  
+ *     --timestamp      <-- The option is assigned a true value
+ *     --no-timestamp   <-- The option is assigned a false value
+ * }}}
+ * == Full Example ==
+ *
+ * {{{
+ * import java.util.Date
+ * import java.io.File
+ * import java.text.{SimpleDateFormat, ParseException}
+ * import org.fud.optparse._
+ * 
+ * object Sample {
+ *   val dateFormat = new SimpleDateFormat("MM-dd-yyyy")
+ * 
+ *   def main(args: Array[String]) {
+ *     var options = Map[Symbol, Any]('quiet -> false, 'expert -> false, 'base -> "HEAD")
+ *     var libs = List[File]()
+ *     val file_args = try {
+ *       new OptionParser {
+ *         // Add an argument parser to handle date values
+ *         addArgumentParser[Date] { arg =>
+ *           try   { dateFormat.parse(arg) }
+ *           catch { case e: ParseException => throw new InvalidArgumentException("Expected date in mm-dd-yyyy format") }
+ *         }
+ *         banner = "coolapp [options] file..."
+ *         separator("")
+ *         separator("Options:")
+ *         boolArg("-q", "--quiet",           "Do not write to stdout.") 
+ *           { v => options += 'quiet -> v }
+ *
+ *         noArg  ("-x", "",                  "Use expert mode")
+ *           { () => options += 'expert -> true }
+ *
+ *         reqArg ("-n <name>", "",           "Enter you name.")
+ *           { v: String => options += 'name -> v }
+ *
+ *         reqArg ("-l", "--lib=<lib>",       "Specify a library. Can be used mutiple times.")
+ *           { v: File => libs = v :: libs }
+ *
+ *         reqArg ("-d", "--date <date>",     "Enter date in mm-dd-yyyy format.")
+ *           { v: Date => options += 'date -> v }
+ *
+ *         reqArg ("-t", "--type=<type>", List("ascii", "binary"), "Set the data type. (ascii, binary)") 
+ *           { v: String => options += 'type -> v }
+ *
+ *         optArg ("-b", "--base[=<commit>]", "Set the base commit. Default is HEAD.")
+ *           { v: Option[String] => options += 'base -> v.getOrElse("HEAD") }
+ *       }.parse(args)
+ *     }
+ *     catch { case e: OptionParserException => println(e.getMessage); exit(1) }
+ * 
+ *     println("Options: " + options)
+ *     println("Libraries: " + libs.reverse)
+ *     println("File Args: " + file_args)
+ *   }
+ * }
+ *
+ * Command Line: -l /etc/foo --lib=/tmp/bar -x .profile -n Bob -d09-11-2001
+ * -------------------------------------------------------------------------------
+ * Options: Map('name -> Bob, 'quiet -> false, 'base -> HEAD, 
+ *              'date -> Tue Sep 11 00:00:00 CDT 2001, 'expert -> true)
+ * Libraries: List(/etc/foo, /tmp/bar)
+ * File Args: List(.profile)
+ *
+ * Command Line: --date=04/01/2011
+ * -------------------------------------------------------------------------------
+ * invalid argument: --date=04/01/2011   (Expected date in mm-dd-yyyy format)
+ *
+ * Command Line: --ty=ebcdic
+ * -------------------------------------------------------------------------------
+ * invalid argument: --ty ebcdic    (ascii, binary)
+ *
+ * Command Line: --ty=a
+ * -------------------------------------------------------------------------------
+ * Options: Map('quiet -> false, 'expert -> false, 'base -> HEAD, 'type -> ascii)
+ * Libraries: List()
+ * File Args: List()
+ 
+ * }}}
+ */
 
 class OptionParser {
+  /** Set this to `false` to avoid the automatically added help switch.
+   *
+   * The action for the added help switch is to print the help text to `stdout` and then
+   * call `exit(0)`.
+   *
+   * You can also override the default help switch by adding your own switch with a
+   * short name of "-h" or a long name of "--help". */
+  var auto_help = true
   
-  var auto_help = true   // Set to false if you don't want -h, --help auto added
-                         // Or simply add your own switch for either -h, or --help to override.
-                         // The default help action will print help and exit(0)
+  /** Set to false to omit extra information in error messages. */
   var verbose_errors = true  // Use verbose error messages
   
   protected val argv = new ListBuffer[String]
   protected var switches = new ListBuffer[Switch]
   
   protected var _curr_arg_display = ""  // Used for error reporting
-  def curr_arg_display = _curr_arg_display
+  protected def curr_arg_display = _curr_arg_display
   
+  /** Returns the formatted help text as a String */
   def help: String = {
     add_auto_help
     (if (banner.isEmpty) "" else banner + "\n") + switches.mkString("\n")
   }
+  /** Same as calling help. */
   override def toString = help
   
   protected def add_auto_help: Unit = {
@@ -37,61 +320,63 @@ class OptionParser {
       this.noArg("-h", "--help", "Show this message") { () => println(this); exit(0) }
   }
   
-  // The banner is displayed first by the help/toString methods
+  /** Set the banner that is displayed as the first line of the help text. */
   var banner = ""
-  
-  // --------------------------------------------------------------------------------------------
+
+  /** Add a message to the help text.
+   *
+   *  It will be displayed at the left margin after any previously defined switches/separators. */
   def separator(text: String) = addSwitch(new Separator(text))
   
-  // --------------------------------------------------------------------------------------------
-  // Define a switch that takes no arguments
+  /** Define a switch that takes no arguments. */
   def noArg(short: String, long: String, info: String*)(func: () => Unit): Unit =
     addSwitch(new NoArgSwitch(getNames(short, long), info, func))
 
-  // --------------------------------------------------------------------------------------------
-  // Define a boolean switch.  This switch takes no arguments.
-  // The long form of the switch may be prefixed with no- to negate the switch
-  //   For example a swith with long name  --expert could be specified as --no-expert
+  /**
+   * Define a boolean switch.  
+   * This switch takes no arguments.  The long form of the switch may be prefixed with no- to negate the switch.
+   * For example a switch with long name  --expert could be specified as --no-expert on the command line. */
   def boolArg(short: String, long: String, info: String*)(func: Boolean => Unit): Unit =
     addSwitch(new BoolSwitch(getNames(short, long, true), info, func))
 
-  // --------------------------------------------------------------------------------------------
-  // Define a switch that takes a required argument
+  /** Define a switch that takes a required argument. */
   def reqArg[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
-  // Define a switch that takes a required argument where the valid values are given by a Seq[]
+  /**  Define a switch that takes a required argument where the valid values are given by a Seq[]. */
   def reqArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
-  // Define a switch that takes a required argument where the valid values are given by a Map
+  /** Define a switch that takes a required argument where the valid values are given by a Map. */
   def reqArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
-  // --------------------------------------------------------------------------------------------
-  // Define a switch that takes an optional argument
+  /** Define a switch that takes an optional argument. */
   def optArg[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
-  // Define a switch that takes an optional argument where the valid values are given by a Seq[]
+  /** Define a switch that takes an optional argument where the valid values are given by a Seq[]. */
   def optArg[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
-  // Define a switch that takes an optional argument where the valid values are given by a Map
+  /** Define a switch that takes an optional argument where the valid values are given by a Map. */
   def optArg[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
-    // Define a switch that takes a comma separated list of arguments.
+  /** Define a switch that takes a comma separated list of arguments. */
   def listArg[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassManifest[T]): Unit =
     addSwitch(new ListArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   
-  // --------------------------------------------------------------------------------------------
-  // Parse the given command line.  Each token from the command line should be
-  // in a separate entry in the given sequence such as the array of strings passed
-  // to def main(args: Array[String]) {}
-  // The options are processed using the code that has been previously specified when
-  // setting up the parser.  A List[String] of all non-option arguments is returned.
+  /**
+   * Parse the given command line. 
+   * Each token from the command line should be in a separate entry in the given sequence such
+   * as the array of strings passed to `def main(args: Array[String]) {}`.
+   * The option switches are processed using the previously defined switches.  All non-switch
+   * arguments are returned as a list of strings. 
+   *
+   * If any problems are encountered an [[org.fud.optparse.OptionParserException]] is thrown.
+   */
   def parse(args: Seq[String]): List[String] = {
     // Pluck a switch argument from argv. If greedy we always take it.
     // If not we take it if it does not begin with a dash.
@@ -134,8 +419,27 @@ class OptionParser {
     non_switch_args.toList
   }
   
-  // Register an Argument parser
-  // This will replace any previously added parser for the same argument type 
+  /**
+   * Add an argument parser for a specific type.
+   *
+   * Parsers for the these types are provided by default:
+   * <ul>
+   * <li>`String`</li>
+   * <li>`Int`</li>
+   * <li>`Short`</li>
+   * <li>`Long`</li>
+   * <li>`Float`</li>
+   * <li>`Double`</li>
+   * <li>`Char`</li>
+   * <li>`java.io.File`</li>
+   * </ul>
+   * A parser is simply a function that takes a single `String` argument and returns a value of
+   * the desired type.  If your parser detects an invalid argument it should throw 
+   * an [[org.fud.optparse.InvalidArgumentException]].  You can supply a message in the exception
+   * that indicates why the argument was not valid.
+   *
+   * If you add a parser for a type that already has a parser, the existing parser will be replaced.
+   */
   def addArgumentParser[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
     val wrapped = { s: String =>
       try { f(s) } 
@@ -415,51 +719,44 @@ class OptionParser {
   // ==========================================================================================
   // Define default argument parsers
 
-
-  // String parser
-  addArgumentParser {s: String => s}
+  addArgumentParser[String] {arg => arg}
   
-  // Int parser
-  addArgumentParser { s: String => 
+  addArgumentParser[Int] { arg => 
     try { 
-      val n = numWithRadix(s)
+      val n = numWithRadix(arg)
       java.lang.Integer.parseInt(n._1, n._2)
     }  
     catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
   }
   
-  // Short parser
-  addArgumentParser { s: String => 
+  addArgumentParser[Short] { arg => 
     try {
-      val n = numWithRadix(s)
+      val n = numWithRadix(arg)
       java.lang.Short.parseShort(n._1, n._2)
     } 
     catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
   }
   
-  // Long parser
-  addArgumentParser { s: String => 
+  addArgumentParser[Long] { arg => 
     try {
-      val n = numWithRadix(s)
+      val n = numWithRadix(arg)
       java.lang.Long.parseLong(n._1, n._2)
     }
     catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
   }
   
-  // Float parser
-  addArgumentParser { s: String => 
+  addArgumentParser[Float] { arg => 
     try { 
-      val f = s.toFloat
+      val f = arg.toFloat
       if (f == Float.PositiveInfinity || f == Float.NegativeInfinity) throw new NumberFormatException
       f
     } 
     catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
   }
   
-  // Double parser
-  addArgumentParser { s: String => 
+  addArgumentParser[Double] { arg => 
     try { 
-      val d = s.toDouble
+      val d = arg.toDouble
       if (d == Double.PositiveInfinity || d == Double.NegativeInfinity) throw new NumberFormatException
       d
     } 
@@ -481,14 +778,14 @@ class OptionParser {
   private val SINGLE  = "(.)".r
   private val OCTAL   = """\\([0-3][0-7]{2}|[0-7]{1,2})""".r
   private val UNICODE = """\\u([0-9a-fA-F]{4})""".r
-  addArgumentParser { arg: String => 
+  addArgumentParser[Char] { arg => 
     import java.lang.Integer
     arg match {
-      case "\\b"			=> '\u0008' /* backspace BS */
-      case "\\t"			=> '\u0009' /* horizontal tab HT */
-      case "\\n"			=> '\u000a' /* linefeed LF */
-      case "\\f"			=> '\u000c' /* form feed FF */
-      case "\\r"			=> '\u000d' /* carriage return CR */
+      case "\\b"			=> '\u0008' // BS - backspace
+      case "\\t"			=> '\u0009' // HT - horizontal tab
+      case "\\n"			=> '\u000a' // LF - linefeed
+      case "\\f"			=> '\u000c' // FF - form feed
+      case "\\r"			=> '\u000d' // CR - carriage return
       case UNICODE(s) => Integer.parseInt(s, 16).toChar
       case OCTAL(s)   => Integer.parseInt(s, 8).toChar
       case SINGLE(s)  => s(0)
@@ -499,34 +796,17 @@ class OptionParser {
   // File path parser
   // Converts argument to a java.io.File.
   // ==========================================================================================
-  addArgumentParser { s: String => new java.io.File(s) }
-  
+  addArgumentParser[File] { arg => new File(arg) }
 }
 
-object Foo {
-  
-  def main(args: Array[String]): Unit = {
-    val file_args = try {
-      new OptionParser {
-        banner = "usage: Foo [options]"
-        separator("")
-        separator("Main options:")
-        boolArg("-v", "--verbose", "Verbose output") { v: Boolean => println("Verbose: " + v) }
-        boolArg("-f", "--fast", "Fast mode") { v: Boolean => println("Fast: " + v) }
-        noArg("-x",   "--expert", "Expert Mode") { () => println("Expert Mode")}
-        reqArg("-l",  "--length ARG", "Set length") { len: Int => println("Set Length: " +  len)}
-        reqArg("-n",  "--name NAME", List("dakota", "mingus", "me"), "Set Name") { s => println("Set Name: " +  s)}
-        optArg("-t",  "--type [TYPE]", List("short", "tall", "tiny"), "Set type") { theType: Option[String] => println("Set type: " + theType)}
-        separator("")
-        separator("Other options:")
-        reqArg(""  ,  "--text TEXT", "Set text") { text: String => println("Set text: " + text)}
-        reqArg("-a",  "--act NAME", "Set Act") { s: String => println("Set Act: " +  s)}
-        optArg("-b",  "--build [NAME]", "Set Build name. Default: 'build'") { theType: Option[String] => println("Set build: " + theType)}
-        listArg("-a", "--ages (46,11,...)", "Set ages") { ages: List[Int] => println("Set ages: " + ages)}
-      }.parse(args)
-    }  
-    catch { case e: OptionParserException => println(e.getMessage); exit(1) }
-    
-    println("Args: " + file_args)
-  }
-}
+/** Base class of all exceptions thrown by [[org.fud.optparse.OptionParser]].  
+ *
+ * You should catch this when calling `OptionParser#parse()`. */
+class OptionParserException(m: String) extends RuntimeException(m)
+
+/**
+ * An instance of this exception should be thrown by argument parsers upon detecting
+ * an invalid argument value.
+ *
+ * See the `addArgumentParser` method of [[org.fud.optparse.OptionParser]]. */
+class InvalidArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }

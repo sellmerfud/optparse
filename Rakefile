@@ -13,72 +13,55 @@ TEST_SRC       = FileList["#{TEST_SCALA_SRC_DIR}/**/*.scala"]
 SCALATEST_JARS = FileList["test/lib/*.jar"].join(File::PATH_SEPARATOR)
         
                 
-CLASSES_DIR     = 'classes'
-LIB_DIR         = 'lib'
-JAR_FILES       = FileList["#{LIB_DIR}/**/*.jar"]
-CLASSPATH       = JAR_FILES.join(File::PATH_SEPARATOR)
-TEST_CLASSPATH = if CLASSPATH.empty? 
-  SCALATEST_JARS + ':classes'
-else
-  SCALATEST_JARS + File::PATH_SEPARATOR + CLASSPATH + ':classes'
-end
+CLASSES_DIR    = 'classes'
+TEST_CLASSPATH =  SCALATEST_JARS + ':classes'
 
-RESOURCE_SRC_DIR = "#{SRC_DIR}/resources"
-RESOURCE_SRC     = FileList["#{RESOURCE_SRC_DIR}/**/*.xml", "#{RESOURCE_SRC_DIR}/**/*.properties"]
-RESOURCE_DEST    = RESOURCE_SRC.sub(/^#{RESOURCE_SRC_DIR}/, CLASSES_DIR)
+DOC_DIR = 'scaladoc'
 
 CLEAN.include(CLASSES_DIR)
+CLOBBER.include(JAR_FILE, DOC_DIR)
 
 # Task to create the classes dir.
 directory CLASSES_DIR
 
-def copyAll(src_dir, dest_dir)
-  mkdir_p dest_dir unless File.exists?(dest_dir)
-  FileList["#{src_dir}/**/*"].each do |src|
-    target = src.sub(/^#{src_dir}/, dest_dir)
-    mkdir_p File.dirname(target) unless File.exists?(File.dirname(target))
-    cp src, target unless File.directory?(src)
-  end
-end
+COMPILE_ARGS = "-sourcepath #{SCALA_SRC_DIR} -d #{CLASSES_DIR} #{SCALA_FILES}"
 
-desc "Copy resource files to the classes directory"
-task :resources => [CLASSES_DIR] do
-  copyAll(RESOURCE_SRC_DIR, CLASSES_DIR)
-end
-
-CLASSPATH_ARG = CLASSPATH.empty? ? "" : "-classpath #{CLASSPATH} "
-COMPILE_ARGS = "-sourcepath #{SCALA_SRC_DIR} -d #{CLASSES_DIR} #{CLASSPATH_ARG} #{SCALA_FILES}"
-
-desc "Compile Scala source files"
-task :fsc, [:params] => CLASSES_DIR do |t, args|
-  case args[:params]
+desc "Compile scala source files (param can be -reset or -shutdown)."
+task :fsc, [:param] => CLASSES_DIR do |t, args|
+  case args[:param]
   when '-reset' then sh "fsc -reset"
   when '-shutdown' then sh "fsc -shutdown"
   else sh "fsc #{args[:params]} #{COMPILE_ARGS}"
   end
 end
+desc "Compile scala source files (same as fsc)."
 task :compile => :fsc 
 
 
-desc "Build the project"
-task :build => [:compile, :resources] 
+desc "Build the jar file and the api documentation."
+task :build => [:jar, :doc] 
 
-desc "Clean, then build the project"
-task :clean_build => [:clean, :build]
-
-desc "Create a jar file with the contents of the classes directory"
-task :jar => [:build] do
+desc "Create a jar file with the contents of the classes directory."
+task :jar => [:compile] do
   sh "jar -cf #{JAR_FILE} -C #{CLASSES_DIR} ."
 end
 
+directory DOC_DIR
+
+desc "Create api documentation."
+task :doc => [DOC_DIR] do
+  sh "scaladoc -d #{DOC_DIR} -doc-title 'Option Parser' #{SCALA_FILES}"
+end
+
+
 TEST_SCALAC_ARGS = "-sourcepath #{TEST_SCALA_SRC_DIR} -d #{CLASSES_DIR} -classpath #{TEST_CLASSPATH} #{TEST_SRC}"
-desc "Compile Scala Tests"
+desc "Compile unit tests."
 task :test_compile do 
   sh "fsc -deprecation #{TEST_SCALAC_ARGS}"
 end
 
-desc "Build the unit tests"
-task :test_build => [:build, :test_compile]
+desc "Build the unit tests."
+task :test_build => [:compile, :test_compile]
 
 # The target can be one of:
 #  Name of a specific testing spec with or without the Spec suffix
