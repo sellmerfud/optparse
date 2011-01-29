@@ -44,6 +44,9 @@ import collection.mutable.ListBuffer
  * <li>You can easily define your own argument parsers and/or replace the default ones.</li>
  * </ul>
  *
+ * == Dependencies ==
+ * This code requires Scala 2.8 as it relies on `ClassManifest`.
+ *
  * == Defining Switches ==
  * You define a switch by supplying its name(s), description, and a function that will be 
  * called each time the switch is detected in the list of command line arguments.
