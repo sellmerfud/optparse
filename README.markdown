@@ -81,7 +81,7 @@ text for this switch looks like this:
 ## Special Tokens ##
 
 * `--` is iterpreted as the ''end of switches''.  When encountered no following arguments on the
-       command line will be treated as switches.
+command line will be treated as switches.
 * `-`  is interpreted as a normal argument and not a switch.  It is commonly used to indicate `stdin`.
 
 ## Switch Types ##
@@ -189,7 +189,8 @@ Short switches encountered on the command line are interpreted as follows:
     The argument for a switch may be specified with or without intervening spaces:
         -ffoo.tar  == -f foo.tar
     
-    For arguments separated by space, switches with required arguments are greedy while those that take optional arguments are not. They will ignore anything that looks like a another switch.
+    For arguments separated by space, switches with required arguments are greedy while those that
+    take optional arguments are not. They will ignore anything that looks like a another switch.
        -v -f -t       <-- The -f option is assigned the value "-t"
        -v -f -text    <-- The -f option is assigned the value "-text"
        -v -f --text   <-- The -f option is assigned the value "--text"
@@ -201,7 +202,7 @@ Short switches encountered on the command line are interpreted as follows:
        -v -b-text     <-- The -b option is assigned the value "-text" (no intervening space)
 
 ## How Long Switches Are Parsed ##
-Long swithes encountered on the command line are interpreted as follows:
+Long switches encountered on the command line are interpreted as follows:
 
     Assume that the following switches have been defined:
        --timestamp       (Boolean - takes no argument) 
@@ -304,7 +305,7 @@ however you like.
 
 ## Dependencies ##
 This code requires Scala 2.8 as it relies on `ClassManifest`.  
-There are no extenal dependencies.  
+There are no external dependencies.  
 
 ## License ##
 MIT License -- You can use it as is or modify it however you would like.
