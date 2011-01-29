@@ -52,7 +52,7 @@ import collection.mutable.ListBuffer
  * expected type. {{{
  * var revision = 0
  * val cli = new OptionParser
- * cli.reqd[Int]("-r", "--revision NUM", "Choose revision") { v => revision = v }
+ * cli.reqd("-r", "--revision NUM", "Choose revision") { v: Int => revision = v }
  * val args = cli.parse(List("-r", "9"))
  * }}}
  * The `reqd()` function defines a switch that takes a required argument.  In this case we have
@@ -130,7 +130,7 @@ import collection.mutable.ListBuffer
  * For switches that take arguments, either required or optional, you can specify a list of
  * acceptable values. {{{
  * def setColor(c: String) = ...
- * cli.reqd[String]("", "--color COLOR", List("red", "green", "blue")) { v => setColor(v) }
+ * cli.reqd("", "--color COLOR", List("red", "green", "blue")) { v => setColor(v) }
  * }}}
  * Here if the user enters `--color purple` on the command line an [[org.fud.optparse.OptionParserException]] is
  * thrown.  The exception message will display the accepable values.  Also the user can enter
@@ -138,7 +138,7 @@ import collection.mutable.ListBuffer
  * coolapp --color r     // <==  Will be interpreted as red
  * }}}
  * If the value entered matches two or more of the acceptable values then an [[org.fud.optparse.OptionParserException]] is
- * thrown with a messge indicating that the value was ambiguous and displays the matched values.
+ * thrown with a message indicating that the value was ambiguous and displays the acceptable values.
  * Also note that you can pass a `Map` instead of a `List` if you need to map string values to
  * some other type. {{{
  * class Color(rgb: String)
@@ -146,16 +146,18 @@ import collection.mutable.ListBuffer
  * val green = new Color("#00FF00")
  * val blue  = new Color("#0000FF")
  * def setColor(c: Color) = ...
- * cli.optl("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v => setColor(v.getOrElse(red)) }
+ * cli.optl("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v => 
+ *   setColor(v.getOrElse(red))
+ * }
  * }}}
  * Notice here that we did not have to specify the type of the function parameter `v` because the
- * compiler can infer the type from the `Map` parameter. And we specified that the argument is optional,
- * the type of `v` is `Option[Color]`.
+ * compiler can infer the type from the `Map[String, Color]` parameter. Since we are defining a
+ * switch with an optional argument, the type of `v` is `Option[Color]`.
  *
  * == Banner, Separators and Help Text ==
  * You can specify a banner which will be the first line displayed in the help text. You can also
- * defined separators to display information between the switches in the help text. {{{
- * val cli = OptionParser
+ * define separators that display information between the switches in the help text. {{{
+ * val cli = new OptionParser
  * cli.banner = "coolapp [Options] file..."
  * cli separator ""
  * cli separator "Main Options:"
@@ -313,6 +315,8 @@ import collection.mutable.ListBuffer
  * File Args: List()
  
  * }}}
+ *
+ * @author Curt Sellmer
  */
 
 class OptionParser {
