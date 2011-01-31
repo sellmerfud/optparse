@@ -332,14 +332,10 @@ class OptionParser {
    * short name of "-h" or a long name of "--help". */
   var auto_help = true
   
-  /** Set to false to omit extra information in error messages. */
-  var verbose_errors = true  // Use verbose error messages
-  
   protected val argv = new ListBuffer[String]
   protected var switches = new ListBuffer[Switch]
   
-  protected var _curr_arg_display = ""  // Used for error reporting
-  protected def curr_arg_display = _curr_arg_display
+  protected var curr_arg_display = ""  // Used for error reporting
   
   /** Returns the formatted help text as a String */
   def help: String = {
@@ -420,7 +416,7 @@ class OptionParser {
       
       if (argv.nonEmpty && (greedy || !(argv(0).startsWith("-") && argv(0).length > 1))) {
         val a = argv.remove(0)
-        _curr_arg_display += (" " + a)  // Update for error reporting
+        curr_arg_display += (" " + a)  // Update for error reporting
         Some(a)
       }
       else
@@ -478,8 +474,9 @@ class OptionParser {
     val wrapped = { s: String =>
       try { f(s) } 
       catch { 
-        case e: InvalidArgumentException if e.getMessage.isEmpty || !verbose_errors => throw new InvalidArgument
-        case e: InvalidArgumentException => throw new InvalidArgument("   (%s)".format(e.getMessage))
+        // Convert to internal exceptions so we can prefix the message with the erroneous input.
+        case e: InvalidArgumentException   => throw new InvalidArgument(e)
+        case e: AmbiguousArgumentException => throw new AmbiguousArgument(e)
       } 
     }
     arg_parsers = (m -> wrapped) :: arg_parsers
@@ -487,9 +484,11 @@ class OptionParser {
     
   protected class ArgumentMissing extends OptionParserException("argument missing: " + curr_arg_display)
   protected class InvalidArgument(m: String) extends OptionParserException("invalid argument: " + curr_arg_display + m) {
-    def this() = this("")
+    def this(e: InvalidArgumentException) = this(if (e.getMessage.isEmpty) "" else "   (%s)".format(e.getMessage))
   }
-  protected class AmbiguousArgument(m: String) extends OptionParserException("ambiguous argument: " + curr_arg_display + m)
+  protected class AmbiguousArgument(m: String) extends OptionParserException("ambiguous argument: " + curr_arg_display + m) {
+    def this(e: AmbiguousArgumentException) = this(if (e.getMessage.isEmpty) "" else "   (%s)".format(e.getMessage))
+  }
   protected class NeedlessArgument extends OptionParserException("needless argument: " + curr_arg_display)
   protected class InvalidOption extends OptionParserException("invalid option: " + curr_arg_display)
   protected class AmbiguousOption(m: String) extends OptionParserException("ambiguous option: " + curr_arg_display + m) {
@@ -585,7 +584,7 @@ class OptionParser {
     def this(m: Map[String, T]) = this(m.toList)
     
     def get(arg: String): T = {
-      def display(l: List[(String, T)]): String = if (verbose_errors) "    (%s)".format(l.map(_._1).mkString(", ")) else ""
+      def display(l: List[(String, T)]): String = "    (%s)".format(l.map(_._1).mkString(", "))
       vals.filter(_._1.startsWith(arg)).sortWith(_._1.length < _._1.length) match {
         case x :: Nil => x._2
         case x :: xs  => if (x._1 == arg) x._2 else throw new AmbiguousArgument(display(x :: xs))
@@ -693,12 +692,9 @@ class OptionParser {
   // exact match it wins, otherwise and AmbiguousOption exception is thrown
   // Throws InvalidOption if the switch cannot be found
   protected def longSwitch(name: String, arg: Option[String]): SwitchToken = {
-    def display(l: List[Switch]): String = {
-      if (verbose_errors)
-        "    (%s)".format(l.map(s => (if (s.negatedMatch(name)) "--no-" else "--") + s.names.long).mkString(", "))
-      else
-        ""
-    }
+    def display(l: List[Switch]): String =
+      "    (%s)".format(l.map(s => (if (s.negatedMatch(name)) "--no-" else "--") + s.names.long).mkString(", "))
+    
     val switch = switches.toList.filter(_.partialMatch(name)).sortWith(_.names.long.length < _.names.long.length) match {
       case x :: Nil => x
       case x :: xs  => if (x.exactMatch(name)) x else throw new AmbiguousOption(display(x :: xs))
@@ -724,7 +720,7 @@ class OptionParser {
     if (argv.isEmpty)
       Terminate()
     else {
-      _curr_arg_display = argv(0)
+      curr_arg_display = argv(0)
       argv.remove(0) match {
         // The order of the cases here is important!
         case TerminationToken()           => Terminate()
@@ -738,8 +734,6 @@ class OptionParser {
     }
   }
   
-  private def errMsg(s: String) = if (verbose_errors) s else ""
-
   private val HexNum = """(-)?(?i:0x([0-9a-f]+))""".r
   private val OctNum = """(-)?0([0-7]+)""".r
   private def numWithRadix(num: String): (String, Int) = {
@@ -760,7 +754,7 @@ class OptionParser {
       val n = numWithRadix(arg)
       java.lang.Integer.parseInt(n._1, n._2)
     }  
-    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Integer expected")) }
+    catch { case _: NumberFormatException => throw new InvalidArgumentException("Integer expected") }
   }
   
   addArgumentParser[Short] { arg => 
@@ -768,7 +762,7 @@ class OptionParser {
       val n = numWithRadix(arg)
       java.lang.Short.parseShort(n._1, n._2)
     } 
-    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Short expected")) }
+    catch { case _: NumberFormatException => throw new InvalidArgumentException("Short expected") }
   }
   
   addArgumentParser[Long] { arg => 
@@ -776,7 +770,7 @@ class OptionParser {
       val n = numWithRadix(arg)
       java.lang.Long.parseLong(n._1, n._2)
     }
-    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Long expected")) }
+    catch { case _: NumberFormatException => throw new InvalidArgumentException("Long expected") }
   }
   
   addArgumentParser[Float] { arg => 
@@ -785,7 +779,7 @@ class OptionParser {
       if (f == Float.PositiveInfinity || f == Float.NegativeInfinity) throw new NumberFormatException
       f
     } 
-    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Float expected")) }
+    catch { case _: NumberFormatException => throw new InvalidArgumentException("Float expected") }
   }
   
   addArgumentParser[Double] { arg => 
@@ -794,7 +788,7 @@ class OptionParser {
       if (d == Double.PositiveInfinity || d == Double.NegativeInfinity) throw new NumberFormatException
       d
     } 
-    catch { case _: NumberFormatException => throw new InvalidArgumentException(errMsg("Double expected")) }
+    catch { case _: NumberFormatException => throw new InvalidArgumentException("Double expected") }
   }
   
   // Char parser
@@ -826,7 +820,7 @@ class OptionParser {
       case HEX(s)     => Integer.parseInt(s, 16).toChar
       case UNICODE(s) => Integer.parseInt(s, 16).toChar
       case SINGLE(s)  => s(0)
-      case _ => throw new InvalidArgument(errMsg("Single character expected"))
+      case _ => throw new InvalidArgument("Single character expected")
     }
   }
   
@@ -847,3 +841,10 @@ class OptionParserException(m: String) extends RuntimeException(m)
  *
  * See the `addArgumentParser` method of [[org.fud.optparse.OptionParser]]. */
 class InvalidArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
+
+/**
+ * An instance of this exception should be thrown by argument parsers upon detecting
+ * an ambiguous argument value.
+ *
+ * See the `addArgumentParser` method of [[org.fud.optparse.OptionParser]]. */
+class AmbiguousArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }

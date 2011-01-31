@@ -87,19 +87,19 @@ command line will be treated as switches.
 ## Switch Types ##
 You can define switches that take no arguments, an optional argument, or a required argument.
 
-    - Flag
-          cli.flag("-x", "--expert", "Description") { () => ... }
+    Flag
+        cli.flag("-x", "--expert", "Description") { () => ... }
     
-    - Boolean
-          cli.bool("-t", "--timestamp", "Description") { v: Boolean => ... }
+    Boolean
+        cli.bool("-t", "--timestamp", "Description") { v: Boolean => ... }
     
-    - Required Argument 
-          cli.reqd("-n", "--name=NAME", "Description") { v: String => ... }
+    Required Argument 
+        cli.reqd("-n", "--name=NAME", "Description") { v: String => ... }
     
-    - Optional Argument 
-          cli.optl("-d", "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
+    Optional Argument 
+        cli.optl("-d", "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
     
-    - Comma Separated List 
+    Comma Separated List 
           cli.list("-b", "--branches=B1,B2,B3", "Description") { v: List[String] => ... }
 
 ## Limiting Values ##
@@ -143,7 +143,7 @@ define separators that display information between the switches in the help text
     cli separator ""
     cli separator "Main Options:"
     cli.flag("-f", "--force", "Force file creation") { () => ... }
-    cli.reqd("-n NAME", "", "Specify a name") { v: String => ... }
+    cli.reqd("-r REV", "", "Specify a revision") { v: String => ... }
     cli separator ""
     cli separator "Other Options:"
     cli.optl("", "--backup[=NAME]", "Make a backup", "--> NAME defaults to 'backup'")
@@ -156,11 +156,11 @@ define separators that display information between the switches in the help text
     
     Main Options:
         -f, --force                  Force file creation
-        -n NAME                      Specify a name
+        -n REV                       Specify a revision
     
     Other Options:
-            --backup[=FILE]          Make a backup
-                                     --> FILE defaults to 'backup'
+            --backup[=NAME]          Make a backup
+                                     --> NAME defaults to 'backup'
         -t, --[no-]timestamp         Create a timestamp
         -h, --help                   Show this message
     
@@ -209,7 +209,7 @@ Long switches encountered on the command line are interpreted as follows:
        --file FILE       (Requires an argument) 
        --backup[=BACKUP] (Takes an optional argument) 
     
-    The argument for a switch may be joined by and equals sign or may be separated by space:
+    The argument for a switch may be joined by an equals sign or may be separated by space:
         --file=foo.tar == --file foo.tar
         --backup=data.bak == --backup data.bak
     
