@@ -9,7 +9,7 @@ By using closures when defining command line switches your code becomes much eas
 * Automatically formats a help summary.
 * Supports both short (-q) and long (--quiet) switches.
 * Long switch names can be abbreviated on the command line.
-* Switch arguments are fully typed so your code does not have to parse and covert them.
+* Switch arguments are fully typed so your code does not have to parse and convert them.
 * Switch arguments can be restricted to a set of valid values.
 * You can easily define your own argument parsers and/or replace the default ones.
 * Complete ScalaDoc documentation.
@@ -80,7 +80,7 @@ text for this switch looks like this:
 
 ## Special Tokens ##
 
-* `--` is iterpreted as the ''end of switches''.  When encountered no following arguments on the
+* `--` is interpreted as the ''end of switches''.  When encountered no following arguments on the
 command line will be treated as switches.
 * `-`  is interpreted as a normal argument and not a switch.  It is commonly used to indicate `stdin`.
 
@@ -148,7 +148,7 @@ define separators that display information between the switches in the help text
     cli separator "Other Options:"
     cli.optl("", "--backup[=NAME]", "Make a backup", "--> NAME defaults to 'backup'")
       { v: Option[String] => ... }
-    cli.bool("-t", "--timestamp", "Create a timestamp") { () => ... }
+    cli.bool("-t", "--timestamp", "Create a timestamp") { v => ... }
     println(cli)  // or println(cli.help)
     
     Would print the following:
@@ -308,7 +308,7 @@ This code requires Scala 2.8 as it relies on `ClassManifest`.
 There are no external dependencies.  
 
 ## License ##
-MIT License -- You can use it as is or modify it however you would like.
+MIT License -- You can use it as is or modify it however you like.
 
 
 
