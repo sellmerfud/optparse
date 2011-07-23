@@ -2,7 +2,7 @@
 OptionParser is a class that handles the parsing of switches and arguments on the command line.
 It is based on the Ruby OptionParser class that is part of the standard Ruby library. It supports
 POSIX style short option switches as well as GNU style long option switches.
-By using closures when defining command line switches your code becomes much easier to write and maintain.  
+By using closures when defining command line switches your code becomes much easier to write and maintain.
 
 ## Features ##
 * The switch specification and the code to handle it are written in the same place.
@@ -16,20 +16,20 @@ By using closures when defining command line switches your code becomes much eas
 * Full set of unit tests.
 
 ## Defining Switches ##
-You define a switch by supplying its name(s), description, and a function that will be 
+You define a switch by supplying its name(s), description, and a function that will be
 called each time the switch is detected in the list of command line arguments.
 Your function has the type `{ value: T => Unit }`.  You supply the type for `T` and the framework
 will select the appropriate parser and call your function with the value converted to your
-expected type. 
+expected type.
 
     var revision = 0
     val cli = new OptionParser
     cli.reqd("-r", "--revision NUM", "Choose revision") { v: Int => revision = v }
     val args = cli.parse(List("-r", "9"))
-    
+
 The `reqd()` function defines a switch that takes a required argument.  In this case we have
 specified that we expect the argument value to be an `Int`.  If the user enters a value that
-is not a valid integer then an `OptionParserException` is thrown with an appropriate error 
+is not a valid integer then an `OptionParserException` is thrown with an appropriate error
 message.  If the value is valid then our supplied function is called with the integer value.
 Here we simply save the value in a variable.  Anything encountered on the command line that
 is not a switch or an argument to a switch is returned in a list by the parse function.
@@ -53,9 +53,9 @@ This will affect how the name is displayed in the help text.
     --quiet
     --revision REV
     --revision=REV
-    --start-date [TODAY] 
-    --start-date=[TODAY] 
-    --start-date[=TODAY] 
+    --start-date [TODAY]
+    --start-date=[TODAY]
+    --start-date[=TODAY]
 
 Notice that in the case of an optional parameter you may put the equal sign inside or outside
 the bracket.  Again this only affects how it is dispalyed in the help message.  If you specify
@@ -73,7 +73,7 @@ when using the long name by preceding the name with `no-`.  For example:
       --no-timestamp    <== function called with v == false
       --no-t            <== function called with v == false  (using partial name)
 
-Notice that you only specify the positive form of the name when defining the switch. The help 
+Notice that you only specify the positive form of the name when defining the switch. The help
 text for this switch looks like this:
 
     -t, --[no-]timestamp            Generate a timestamp
@@ -89,17 +89,17 @@ You can define switches that take no arguments, an optional argument, or a requi
 
     Flag
         cli.flag("-x", "--expert", "Description") { () => ... }
-    
+
     Boolean
         cli.bool("-t", "--timestamp", "Description") { v: Boolean => ... }
-    
-    Required Argument 
+
+    Required Argument
         cli.reqd("-n", "--name=NAME", "Description") { v: String => ... }
-    
-    Optional Argument 
+
+    Optional Argument
         cli.optl("-d", "--start-date[=TODAY]", "Description") { v: Option[String] => ... }
-    
-    Comma Separated List 
+
+    Comma Separated List
           cli.list("-b", "--branches=B1,B2,B3", "Description") { v: List[String] => ... }
 
 ## Limiting Values ##
@@ -125,11 +125,11 @@ some other type.
     val green = new Color("#00FF00")
     val blue  = new Color("#0000FF")
     def setColor(c: Color) = ...
-    
-    cli.optl("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v => 
+
+    cli.optl("", "--color [ARG]", Map("red" -> red, "green" -> green, "blue" -> blue)) { v =>
       setColor(v.getOrElse(red))
     }
-    
+
 Notice here that we did not have to specify the type of the function parameter `v` because the
 compiler can infer the type from the `Map[String, Color]` parameter. Since we are defining a
 switch with an optional argument, the type of `v` is `Option[Color]`.
@@ -150,22 +150,22 @@ define separators that display information between the switches in the help text
       { v: Option[String] => ... }
     cli.bool("-t", "--timestamp", "Create a timestamp") { v => ... }
     println(cli)  // or println(cli.help)
-    
+
     Would print the following:
     coolapp [Options] file...
-    
+
     Main Options:
         -f, --force                  Force file creation
         -n REV                       Specify a revision
-    
+
     Other Options:
             --backup[=NAME]          Make a backup
                                      --> NAME defaults to 'backup'
         -t, --[no-]timestamp         Create a timestamp
         -h, --help                   Show this message
-    
+
 Where did the **`-h, --help`** entry come from?  By default the `help` switch is added automatically.
-The function associated with it will print the help text to `stdout` and call `exit(0)`.  
+The function associated with it will print the help text to `stdout` and call `exit(0)`.
 You can define your own help switch by simply defining a switch with either or both of the
 names `-h`, `--help`.  You can also turn off the auto help altogether.
 
@@ -173,28 +173,28 @@ names `-h`, `--help`.  You can also turn off the auto help altogether.
 Short switches encountered on the command line are interpreted as follows:
 
     Assume that the following switches have been defined:
-       -t, --text   (Takes no argument) 
-       -v           (Takes no argument) 
-       -f FILE      (Requires an argument) 
-       -b [OPT]     (Takes an optional argument) 
-    
+       -t, --text   (Takes no argument)
+       -v           (Takes no argument)
+       -f FILE      (Requires an argument)
+       -b [OPT]     (Takes an optional argument)
+
     Switches that do not accept arguments may be specified separately or may be concatenated together:
        -tv  ==  -t -v
-    
-    A switch that takes an argument may be concatenated to one or more switches that do not take 
+
+    A switch that takes an argument may be concatenated to one or more switches that do not take
     arguments as long as it is the last switch in the group:
         -tvf foo.tar  ==  -t -v -f foo.tar
         -tfv foo.tar  ==  -t -f v foo.tar  (v is the argument value for the -f switch)
-    
+
     The argument for a switch may be specified with or without intervening spaces:
         -ffoo.tar  == -f foo.tar
-    
+
     For arguments separated by space, switches with required arguments are greedy while those that
     take optional arguments are not. They will ignore anything that looks like a another switch.
        -v -f -t       <-- The -f option is assigned the value "-t"
        -v -f -text    <-- The -f option is assigned the value "-text"
        -v -f --text   <-- The -f option is assigned the value "--text"
-    
+
        -v -b t        <-- The -b option is assigned the value "t"
        -v -b -t       <-- The -b option is interpreted without an argument
        -v -b -text    <-- The -b option is interpreted without an argument
@@ -205,19 +205,19 @@ Short switches encountered on the command line are interpreted as follows:
 Long switches encountered on the command line are interpreted as follows:
 
     Assume that the following switches have been defined:
-       --timestamp       (Boolean - takes no argument) 
-       --file FILE       (Requires an argument) 
-       --backup[=BACKUP] (Takes an optional argument) 
-    
+       --timestamp       (Boolean - takes no argument)
+       --file FILE       (Requires an argument)
+       --backup[=BACKUP] (Takes an optional argument)
+
     The argument for a switch may be joined by an equals sign or may be separated by space:
         --file=foo.tar == --file foo.tar
         --backup=data.bak == --backup data.bak
-    
+
     For arguments separated by space, switches with required arguments are greedy while those that take
     optional arguments are not. They will ignore anything that looks like a another switch. See the
     discussion of short switches above for an example.  The behavior for long switches is identical.
-    
-    Boolean switches may be negated.  
+
+    Boolean switches may be negated.
         --timestamp      <-- The option is assigned a true value
         --no-timestamp   <-- The option is assigned a false value
 
@@ -227,10 +227,10 @@ Long switches encountered on the command line are interpreted as follows:
     import java.io.File
     import java.text.{SimpleDateFormat, ParseException}
     import org.fud.optparse._
-    
+
     object Sample {
       val dateFormat = new SimpleDateFormat("MM-dd-yyyy")
-    
+
       def main(args: Array[String]) {
         var options = Map[Symbol, Any]('quiet -> false, 'expert -> false, 'base -> "HEAD")
         var libs = List[File]()
@@ -244,51 +244,51 @@ Long switches encountered on the command line are interpreted as follows:
             banner = "coolapp [options] file..."
             separator("")
             separator("Options:")
-            bool("-q", "--quiet", "Do not write to stdout.") 
+            bool("-q", "--quiet", "Do not write to stdout.")
               { v => options += 'quiet -> v }
-    
+
             flag("-x", "", "Use expert mode")
               { () => options += 'expert -> true }
-    
+
             reqd[String]("-n <name>", "", "Enter you name.")
               { v => options += 'name -> v }
-    
+
             reqd[File]("-l", "--lib=<lib>", "Specify a library. Can be used mutiple times.")
               { v => libs = v :: libs }
-    
+
             reqd[Date]("-d", "--date <date>", "Enter date in mm-dd-yyyy format.")
               { v => options += 'date -> v }
-    
-            reqd[String]("-t", "--type=<type>", List("ascii", "binary"), "Set the data type. (ascii, binary)") 
+
+            reqd[String]("-t", "--type=<type>", List("ascii", "binary"), "Set the data type. (ascii, binary)")
               { v => options += 'type -> v }
-    
+
             optl[String]("-b", "--base[=<commit>]", "Set the base commit. Default is HEAD.")
               { v: Option[String] => options += 'base -> v.getOrElse("HEAD") }
           }.parse(args)
         }
         catch { case e: OptionParserException => println(e.getMessage); exit(1) }
-    
+
         println("Options: " + options)
         println("Libraries: " + libs.reverse)
         println("File Args: " + file_args)
       }
     }
-    
+
     Command Line: -l /etc/foo --lib=/tmp/bar -x .profile -n Bob -d09-11-2001
     -------------------------------------------------------------------------------
-    Options: Map('name -> Bob, 'quiet -> false, 'base -> HEAD, 
+    Options: Map('name -> Bob, 'quiet -> false, 'base -> HEAD,
                  'date -> Tue Sep 11 00:00:00 CDT 2001, 'expert -> true)
     Libraries: List(/etc/foo, /tmp/bar)
     File Args: List(.profile)
-    
+
     Command Line: --date=04/01/2011
     -------------------------------------------------------------------------------
     invalid argument: --date=04/01/2011   (Expected date in mm-dd-yyyy format)
-    
+
     Command Line: --ty=ebcdic
     -------------------------------------------------------------------------------
     invalid argument: --ty ebcdic    (ascii, binary)
-    
+
     Command Line: --typ=a
     -------------------------------------------------------------------------------
     Options: Map('quiet -> false, 'expert -> false, 'base -> HEAD, 'type -> ascii)
@@ -299,13 +299,13 @@ Long switches encountered on the command line are interpreted as follows:
 A full set of unit tests using _ScalaTest_ is included.
 
 ## Building ##
-I'm using a Rakefile for development.  However, the source is in a single 
-file: `src/scala/org/fud/optparse/OptionParser.scala`. Include it in your project and build it
-however you like.  
+I'm using a Rakefile for development.  There is also a build.sbt file.  However, the source is in
+a single file: `src/main/scala/org/fud/optparse/OptionParser.scala`. Include it in your project
+and build it however you like.
 
 ## Dependencies ##
-This code requires Scala 2.8 as it relies on `ClassManifest`.  
-There are no external dependencies.  
+This code requires Scala 2.8 as it relies on `ClassManifest`.
+There are no external dependencies.
 
 ## License ##
 MIT License -- You can use it as is or modify it however you like.
