@@ -1,6 +1,6 @@
 
 #  Copyright (c) 2011 Curt Sellmer
-#  
+#
 #  Permission is hereby granted, free of charge, to any person obtaining
 #  a copy of this software and associated documentation files (the
 #  "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
 #  distribute, sublicense, and/or sell copies of the Software, and to
 #  permit persons to whom the Software is furnished to do so, subject to
 #  the following conditions:
-#  
+#
 #  The above copyright notice and this permission notice shall be
 #  included in all copies or substantial portions of the Software.
-#  
+#
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 #  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 #  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,14 +27,14 @@ task :default => [:build]
 BASE_PATH       = '.'
 JAR_FILE        = 'optparse.jar'
 SRC_DIR         = 'src'
-SCALA_SRC_DIR   = "#{SRC_DIR}/scala"
+SCALA_SRC_DIR   = "#{SRC_DIR}/main/scala"
 SCALA_FILES     = FileList["#{SCALA_SRC_DIR}/**/*.scala"]
 
-TEST_SCALA_SRC_DIR = 'test/scala'
+TEST_SCALA_SRC_DIR = "#{SRC_DIR}/test/scala"
 TEST_SRC       = FileList["#{TEST_SCALA_SRC_DIR}/**/*.scala"]
-SCALATEST_JARS = FileList["test/lib/*.jar"].join(File::PATH_SEPARATOR)
-        
-                
+SCALATEST_JARS = FileList["lib/*.jar"].join(File::PATH_SEPARATOR)
+
+
 CLASSES_DIR    = 'classes'
 TEST_CLASSPATH =  SCALATEST_JARS + ':classes'
 
@@ -56,11 +56,11 @@ task :fsc, [:param] => CLASSES_DIR do |t, args|
   end
 end
 desc "Compile scala source files (same as fsc)."
-task :compile => :fsc 
+task :compile => :fsc
 
 
 desc "Build the jar file and the api documentation."
-task :build => [:jar, :doc] 
+task :build => [:jar, :doc]
 
 desc "Create a jar file with the contents of the classes directory."
 task :jar => [:compile] do
@@ -77,7 +77,7 @@ end
 
 TEST_SCALAC_ARGS = "-sourcepath #{TEST_SCALA_SRC_DIR} -d #{CLASSES_DIR} -classpath #{TEST_CLASSPATH} #{TEST_SRC}"
 desc "Compile unit tests."
-task :test_compile do 
+task :test_compile do
   sh "fsc -deprecation #{TEST_SCALAC_ARGS}"
 end
 
