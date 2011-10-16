@@ -45,7 +45,7 @@ CLOBBER.include(JAR_FILE, DOC_DIR)
 
 directory CLASSES_DIR
 
-COMPILE_ARGS = "-sourcepath #{SCALA_SRC_DIR} -d #{CLASSES_DIR} #{SCALA_FILES}"
+COMPILE_ARGS = "-deprecation -sourcepath #{SCALA_SRC_DIR} -d #{CLASSES_DIR} #{SCALA_FILES}"
 
 desc "Compile scala source files (param can be -reset or -shutdown)."
 task :fsc, [:param] => CLASSES_DIR do |t, args|
