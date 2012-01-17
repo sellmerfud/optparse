@@ -304,7 +304,7 @@ a single file: `src/main/scala/org/fud/optparse/OptionParser.scala`. Include it 
 and build it however you like.
 
 ## Dependencies ##
-This code requires Scala 2.8 as it relies on `ClassManifest`.
+This code requires Scala 2.8 or later as it relies on `ClassManifest`.
 There are no external dependencies.
 
 ## License ##
