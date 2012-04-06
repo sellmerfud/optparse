@@ -226,7 +226,7 @@ Long switches encountered on the command line are interpreted as follows:
     import java.util.Date
     import java.io.File
     import java.text.{SimpleDateFormat, ParseException}
-    import org.fud.optparse._
+    import org.sellmerfud.optparse._
 
     object Sample {
       val dateFormat = new SimpleDateFormat("MM-dd-yyyy")
@@ -300,7 +300,7 @@ A full set of unit tests using _ScalaTest_ is included.
 
 ## Building ##
 I'm using a Rakefile for development.  There is also a build.sbt file.  However, the source is in
-a single file: `src/main/scala/org/fud/optparse/OptionParser.scala`. Include it in your project
+a single file: `src/main/scala/org/sellmerfud/optparse/OptionParser.scala`. Include it in your project
 and build it however you like.
 
 ## Dependencies ##

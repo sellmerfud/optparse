@@ -47,16 +47,10 @@ directory CLASSES_DIR
 
 COMPILE_ARGS = "-deprecation -sourcepath #{SCALA_SRC_DIR} -d #{CLASSES_DIR} #{SCALA_FILES}"
 
-desc "Compile scala source files (param can be -reset or -shutdown)."
-task :fsc, [:param] => CLASSES_DIR do |t, args|
-  case args[:param]
-  when '-reset' then sh "fsc -reset"
-  when '-shutdown' then sh "fsc -shutdown"
-  else sh "fsc #{args[:params]} #{COMPILE_ARGS}"
-  end
+desc "Compile scala source files"
+task :compile => CLASSES_DIR do
+  sh "fsc #{COMPILE_ARGS}"
 end
-desc "Compile scala source files (same as fsc)."
-task :compile => :fsc
 
 
 desc "Build the jar file and the api documentation."

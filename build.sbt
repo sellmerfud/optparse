@@ -1,6 +1,6 @@
 name := "optparse"
 
-organization := "org.fud"
+organization := "org.sellmerfud"
 
 version := "1.0-SNAPSHOT"
 

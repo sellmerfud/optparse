@@ -20,12 +20,12 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-package org.fud.optparse_test
+package org.sellmerfud.optparse_test
 
 import _root_.org.scalatest.FlatSpec
 import _root_.org.scalatest.matchers.ShouldMatchers
 
-import org.fud.optparse._
+import org.sellmerfud.optparse._
 
 class OptionParserSpec extends FlatSpec with ShouldMatchers {
   val ARGUMENT_MISSING   = "argument missing:"

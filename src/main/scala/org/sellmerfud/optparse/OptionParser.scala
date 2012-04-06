@@ -21,7 +21,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package org.fud.optparse
+package org.sellmerfud.optparse
 
 import java.io.File
 import collection.mutable.ListBuffer
