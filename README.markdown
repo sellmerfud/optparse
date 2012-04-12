@@ -4,6 +4,11 @@ It is based on the Ruby OptionParser class that is part of the standard Ruby lib
 POSIX style short option switches as well as GNU style long option switches.
 By using closures when defining command line switches your code becomes much easier to write and maintain.
 
+## Maven Information ##
+    groupId:     org.sellmerfud
+    artifactId:  optparse_2.9.1, optparse_2.8.1
+    version:     1.0
+    
 ## Features ##
 * The switch specification and the code to handle it are written in the same place.
 * Automatically formats a help summary.
@@ -266,7 +271,7 @@ Long switches encountered on the command line are interpreted as follows:
               { v: Option[String] => options += 'base -> v.getOrElse("HEAD") }
           }.parse(args)
         }
-        catch { case e: OptionParserException => println(e.getMessage); exit(1) }
+        catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }
 
         println("Options: " + options)
         println("Libraries: " + libs.reverse)
@@ -298,18 +303,9 @@ Long switches encountered on the command line are interpreted as follows:
 ## Unit Tests ##
 A full set of unit tests using _ScalaTest_ is included.
 
-## Building ##
-I'm using a Rakefile for development.  There is also a build.sbt file.  However, the source is in
-a single file: `src/main/scala/org/sellmerfud/optparse/OptionParser.scala`. Include it in your project
-and build it however you like.
-
 ## Dependencies ##
 This code requires Scala 2.8 or later as it relies on `ClassManifest`.
 There are no external dependencies.
 
 ## License ##
 MIT License -- You can use it as is or modify it however you like.
-
-
-
-
