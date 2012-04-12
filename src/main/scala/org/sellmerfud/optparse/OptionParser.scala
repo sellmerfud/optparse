@@ -186,7 +186,8 @@ import collection.mutable.ListBuffer
  *     -h, --help                   Show this message
  * }}}
  * Where did the `-h, --help` entry come from?  By default the `-h` switch is added automatically.
- * The function associated with it will print the help text to `stdout` and call `sys.exit(0)`.  
+ * The function associated with it will print the help text to `stdout` and 
+ * call `java.lang.System.exit(0)`.  
  * You can define your own help switch by simply defining a switch with either or both of the
  * names `-h`, `--help`.  You can also turn off the auto help altogether.
  *
@@ -288,7 +289,7 @@ import collection.mutable.ListBuffer
  *           { v: Option[String] => options += 'base -> v.getOrElse("HEAD") }
  *       }.parse(args)
  *     }
- *     catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }
+ *     catch { case e: OptionParserException => println(e.getMessage); java.lang.System.exit(1) }
  * 
  *     println("Options: " + options)
  *     println("Libraries: " + libs.reverse)
@@ -326,7 +327,7 @@ class OptionParser {
   /** Set this to `false` to avoid the automatically added help switch.
    *
    * The action for the added help switch is to print the help text to `stdout` and then
-   * call `sys.exit(0)`.
+   * call `java.lang.System.exit(0)`.
    *
    * You can also override the default help switch by adding your own switch with a
    * short name of "-h" or a long name of "--help". */
@@ -347,7 +348,7 @@ class OptionParser {
   
   protected def add_auto_help: Unit = {
     if (auto_help && !switches.exists(s => s.names.short == "h" || s.names.long == "--help"))
-      this.flag("-h", "--help", "Show this message") { () => println(this); sys.exit(0) }
+      this.flag("-h", "--help", "Show this message") { () => println(this); java.lang.System.exit(0) }
   }
   
   /** Set the banner that is displayed as the first line of the help text. */
