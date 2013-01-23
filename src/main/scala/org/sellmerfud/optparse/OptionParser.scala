@@ -61,7 +61,7 @@ import scala.reflect.ClassTag
  * }}}
  * The `reqd()` function defines a switch that takes a required argument.  In this case we have
  * specified that we expect the argument value to be an `Int`.  If the user enters a value that
- * is not a valid integer then an [[org.fud.optparse.OptionParserException]] is thrown with an appropriate error 
+ * is not a valid integer then an [[org.sellmerfud.optparse.OptionParserException]] is thrown with an appropriate error 
  * message.  If the value is valid then our supplied function is called with the integer value.
  * Here we simply save the value in a variable.  Anything encountered on the command line that
  * is not a switch or an argument to a switch is returned in a list by the parse function.
@@ -136,12 +136,12 @@ import scala.reflect.ClassTag
  * def setColor(c: String) = ...
  * cli.reqd("", "--color COLOR", List("red", "green", "blue")) { v => setColor(v) }
  * }}}
- * Here if the user enters `--color purple` on the command line an [[org.fud.optparse.OptionParserException]] is
+ * Here if the user enters `--color purple` on the command line an [[org.sellmerfud.optparse.OptionParserException]] is
  * thrown.  The exception message will display the accepable values.  Also the user can enter
  * partial values. {{{
  * coolapp --color r     // <==  Will be interpreted as red
  * }}}
- * If the value entered matches two or more of the acceptable values then an [[org.fud.optparse.OptionParserException]] is
+ * If the value entered matches two or more of the acceptable values then an [[org.sellmerfud.optparse.OptionParserException]] is
  * thrown with a message indicating that the value was ambiguous and displays the acceptable values.
  * Also note that you can pass a `Map` instead of a `List` if you need to map string values to
  * some other type. {{{
@@ -250,7 +250,7 @@ import scala.reflect.ClassTag
  * import java.util.Date
  * import java.io.File
  * import java.text.{SimpleDateFormat, ParseException}
- * import org.fud.optparse._
+ * import org.sellmerfud.optparse._
  * 
  * object Sample {
  *   val dateFormat = new SimpleDateFormat("MM-dd-yyyy")
@@ -407,7 +407,7 @@ class OptionParser {
    * The option switches are processed using the previously defined switches.  All non-switch
    * arguments are returned as a list of strings. 
    *
-   * If any problems are encountered an [[org.fud.optparse.OptionParserException]] is thrown.
+   * If any problems are encountered an [[org.sellmerfud.optparse.OptionParserException]] is thrown.
    */
   def parse(args: Seq[String]): List[String] = {
     // Pluck a switch argument from argv. If greedy we always take it.
@@ -467,7 +467,7 @@ class OptionParser {
    * </ul>
    * A parser is simply a function that takes a single `String` argument and returns a value of
    * the desired type.  If your parser detects an invalid argument it should throw 
-   * an [[org.fud.optparse.InvalidArgumentException]].  You can supply a message in the exception
+   * an [[org.sellmerfud.optparse.InvalidArgumentException]].  You can supply a message in the exception
    * that indicates why the argument was not valid.
    *
    * If you add a parser for a type that already has a parser, the existing parser will be replaced.
@@ -832,7 +832,7 @@ class OptionParser {
   addArgumentParser[File] { arg => new File(arg) }
 }
 
-/** Base class of all exceptions thrown by [[org.fud.optparse.OptionParser]].  
+/** Base class of all exceptions thrown by [[org.sellmerfud.optparse.OptionParser]].  
  *
  * You should catch this when calling `OptionParser#parse()`. */
 class OptionParserException(m: String) extends RuntimeException(m)
@@ -841,12 +841,12 @@ class OptionParserException(m: String) extends RuntimeException(m)
  * An instance of this exception should be thrown by argument parsers upon detecting
  * an invalid argument value.
  *
- * See the `addArgumentParser` method of [[org.fud.optparse.OptionParser]]. */
+ * See the `addArgumentParser` method of [[org.sellmerfud.optparse.OptionParser]]. */
 class InvalidArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
 
 /**
  * An instance of this exception should be thrown by argument parsers upon detecting
  * an ambiguous argument value.
  *
- * See the `addArgumentParser` method of [[org.fud.optparse.OptionParser]]. */
+ * See the `addArgumentParser` method of [[org.sellmerfud.optparse.OptionParser]]. */
 class AmbiguousArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
