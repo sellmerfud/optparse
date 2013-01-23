@@ -25,6 +25,7 @@ package org.sellmerfud.optparse
 
 import java.io.File
 import collection.mutable.ListBuffer
+import scala.reflect.ClassTag
 
 /**
  * == Overview ==
@@ -45,7 +46,7 @@ import collection.mutable.ListBuffer
  * </ul>
  *
  * == Dependencies ==
- * This code requires Scala 2.8 as it relies on `ClassManifest`.
+ * This code requires Scala 2.10 as it relies on `scala.reflect.ClassTag`.
  *
  * == Defining Switches ==
  * You define a switch by supplying its name(s), description, and a function that will be 
@@ -334,7 +335,7 @@ class OptionParser {
   var auto_help = true
   
   private val argv = new ListBuffer[String]
-  private var switches = new ListBuffer[Switch]
+  private val switches = new ListBuffer[Switch]
   
   private var curr_arg_display = ""  // Used for error reporting
   
@@ -371,31 +372,31 @@ class OptionParser {
     addSwitch(new BoolSwitch(getNames(short, long, true), info, func))
 
   /** Define a switch that takes a required argument. */
-  def reqd[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+  def reqd[T](short: String, long: String, info: String*)(func: T => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
   /**  Define a switch that takes a required argument where the valid values are given by a Seq[]. */
-  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: T => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes a required argument where the valid values are given by a Map. */
-  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassManifest[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: T => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes an optional argument. */
-  def optl[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def optl[T](short: String, long: String, info: String*)(func: Option[T] => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new OptArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   /** Define a switch that takes an optional argument where the valid values are given by a Seq[]. */
-  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: Option[T] => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes an optional argument where the valid values are given by a Map. */
-  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: Option[T] => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes a comma separated list of arguments. */
-  def list[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassManifest[T]): Unit =
+  def list[T](short: String, long: String, info: String*)(func: List[T] => Unit)(implicit m: ClassTag[T]): Unit =
     addSwitch(new ListArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   
@@ -471,7 +472,7 @@ class OptionParser {
    *
    * If you add a parser for a type that already has a parser, the existing parser will be replaced.
    */
-  def addArgumentParser[T](f: String => T)(implicit m: ClassManifest[T]): Unit = {
+  def addArgumentParser[T](f: String => T)(implicit m: ClassTag[T]): Unit = {
     val wrapped = { s: String =>
       try { f(s) } 
       catch { 
@@ -614,9 +615,9 @@ class OptionParser {
   // two existing switches.
   private def addSwitch(switch: Switch): Unit = {
     def remove(p: Switch => Boolean): Unit = 
-      switches.findIndexOf(p) match {
-        case -1  =>
-        case idx => switches.remove(idx)
+      switches find(p) match {
+        case Some(s) => switches -= s
+        case _ => 
       }
     
     if (switch.names.short != "") remove(_.names.short == switch.names.short)
@@ -624,9 +625,9 @@ class OptionParser {
     switches += switch
   }
   
-  private val ShortSpec   = """-(\S)(?:\s+(.+))?"""r
-  private val LongSpec    = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?"""r
-  private val LongNegated = """--no-.*"""r
+  private val ShortSpec   = """-(\S)(?:\s+(.+))?""".r
+  private val LongSpec    = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?""".r
+  private val LongNegated = """--no-.*""".r
   // Parse the switch names and return the 'fixed' names.
   // Short name: 
   //   - must begin with a single '-'
@@ -678,11 +679,11 @@ class OptionParser {
   }
     
   // A list of registered argument parsers
-  private var arg_parsers = List[(ClassManifest[_], String => _)]()
+  private var arg_parsers = List[(ClassTag[_], String => _)]()
   
-  // Look up an argument parser given a ClassManifest.
+  // Look up an argument parser given a ClassTag.
   // Throws an exception if not found.
-  private def arg_parser[T](m: ClassManifest[T]): String => T = {
+  private def arg_parser[T](m: ClassTag[T]): String => T = {
     arg_parsers.find(m == _._1).map(_._2.asInstanceOf[String => T]).getOrElse {
       throw new OptionParserException("No argument parser found for " + m)
     }
@@ -710,11 +711,11 @@ class OptionParser {
     SwitchToken(switch, false, arg, false)
   }
   
-  private val TerminationToken   = "--"r
-  private val StdinToken         = "(-)"r
-  private val LongSwitchWithArg  = "--([^=]+)=(.*)"r
-  private val LongSwitch         = "--(.*)"r
-  private val ShortSwitch        = "-(.)(.+)?"r
+  private val TerminationToken   = "--".r
+  private val StdinToken         = "(-)".r
+  private val LongSwitchWithArg  = "--([^=]+)=(.*)".r
+  private val LongSwitch         = "--(.*)".r
+  private val ShortSwitch        = "-(.)(.+)?".r
   
   // Get the next token from the argv buffer.
   private def nextToken: Token = {

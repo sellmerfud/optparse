@@ -6,7 +6,7 @@ By using closures when defining command line switches your code becomes much eas
 
 ## Maven Information ##
     groupId:     org.sellmerfud
-    artifactId:  optparse_2.9.1, optparse_2.8.1
+    artifactId:  optparse_2.10, optparse_2.9.1, optparse_2.8.1
     version:     1.0
     
 ## Features ##
@@ -304,7 +304,6 @@ Long switches encountered on the command line are interpreted as follows:
 A full set of unit tests using _ScalaTest_ is included.
 
 ## Dependencies ##
-This code requires Scala 2.8 or later as it relies on `ClassManifest`.
 There are no external dependencies.
 
 ## License ##

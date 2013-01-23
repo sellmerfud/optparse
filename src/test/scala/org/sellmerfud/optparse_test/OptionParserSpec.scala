@@ -722,9 +722,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "int"
     results should contain key "short"
     results should contain key "long"
-    results("int") should be === (01777)
-    results("short") should be === (035.asInstanceOf[Short])
-    results("long") should be === (024777444L)
+    results("int") should be === (1023)
+    results("short") should be === (29.asInstanceOf[Short])
+    results("long") should be === (5504804L)
 
     // Negative Octal values
     results = Map.empty
@@ -734,9 +734,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     results should contain key "int"
     results should contain key "short"
     results should contain key "long"
-    results("int") should be === (-01777)
-    results("short") should be === ((-035).asInstanceOf[Short])
-    results("long") should be === (-024777444L)
+    results("int") should be === (-1023)
+    results("short") should be === ((-29).asInstanceOf[Short])
+    results("long") should be === (-5504804L)
 
     // Invalid values
     
