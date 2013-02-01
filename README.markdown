@@ -9,6 +9,14 @@ By using closures when defining command line switches your code becomes much eas
     artifactId:  optparse_2.10, optparse_2.9.1, optparse_2.8.1
     version:     1.0
     
+## Sbt Configuration ##
+    libraryDependencies += "org.sellmerfud" %% "optparse" % "1.0"
+
+    // And if Sonatype isn't in your list of resolvers, for some reason:
+    resolvers += "Sonatype Nexus releases" at "https://oss.sonatype.org/content/repositories/releases"
+
+    
+    
 ## Features ##
 * The switch specification and the code to handle it are written in the same place.
 * Automatically formats a help summary.
