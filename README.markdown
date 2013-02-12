@@ -10,7 +10,7 @@ By using closures when defining command line switches your code becomes much eas
     version:     2.0
     
 ## Sbt Configuration ##
-    libraryDependencies += "org.sellmerfud" %% "optparse" % "2.0"
+    libraryDependencies += "org.sellmerfud" % "optparse_2.10" % "2.0"
 
     // And if Sonatype isn't in your list of resolvers, for some reason:
     resolvers += "Sonatype Nexus releases" at "https://oss.sonatype.org/content/repositories/releases"
