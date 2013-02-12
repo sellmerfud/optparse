@@ -4,7 +4,7 @@ description := "A simple but powerful Scala command line parser."
 
 organization := "org.sellmerfud"
 
-version := "1.0"
+version := "2.0"
 
 scalaVersion := "2.10.0"
 
