@@ -282,7 +282,7 @@ object Sample {
     fileType: String         = "binary",
     base:     String         = "HEAD",
     date:     Date           = new Date(),
-    libs:     List[String]   = Nil,
+    libs:     List[File]     = Nil,
     fileArgs: List[String]   = Nil)
 
   def main(args: Array[String]) {
@@ -318,7 +318,7 @@ object Sample {
           { (v, c) => c.copy(base = v getOrElse "HEAD") }
           
         args[String] { (v, c) => c.copy(fileArgs = v) }  
-      }.parse(args)
+      }.parse(args, Config())
     }
     catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }
 
