@@ -1,0 +1,29 @@
+# To clear the file globs from the "Go To File" dialog.
+#  defaults delete com.macromates.TextMate.preview "Find in Folder Globs"
+#    Should exit TextMate first.
+#    This will clear the for ALL projects!!!
+
+# windowTitle                 = "$TM_DISPLAYNAME — ${CWD/^.*\///}"
+
+projectDirectory            = "$CWD"
+FOO = "hello"
+
+excludeFilesInBrowser       = "{$excludeFilesInBrowser,*.class,*.jar}"
+excludeDirectoriesInBrowser = "{$excludeDirectoriesInBrowser,classes,lib}"
+excludeInFileChooser        = "{$excludeInFileChooser,classes,lib,scaladoc,*.jar}"
+excludeInFolderSearch       = "{$excludeInFolderSearch,classes,lib,scaladoc,*.jar}" 
+
+TM_TODO_IGNORE       = '(?:project/|target/)'
+
+showWrapColumn = true
+wrapColumn     = 100
+softWrap       = false
+
+[ attr.untitled ]
+fileType  = 'source.scala'
+
+[ source.scala ]
+
+
+
+
