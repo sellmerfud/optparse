@@ -296,7 +296,7 @@ import scala.reflect.ClassTag
  *         separator("")
  *         separator("Options:")
  *         bool("-q", "--quiet", "Do not write to stdout.") 
- *           { (v, c) => c.copy(quiet = v }
+ *           { (v, c) => c.copy(quiet = v) }
  *
  *         flag("-x", "", "Use expert mode")
  *           { (c) => c.copy(expert = true) }
@@ -317,7 +317,7 @@ import scala.reflect.ClassTag
  *           { (v, c) => c.copy(base = v getOrElse "HEAD") }
  *
  *         args[String] { (v, c) => c.copy(fileArgs = v) }
- *       }.parse(args)
+ *       }.parse(args, Config)
  *     }
  *     catch { case e: OptionParserException => println(e.getMessage); java.lang.System.exit(1) }
  * 

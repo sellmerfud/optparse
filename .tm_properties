@@ -9,9 +9,9 @@ projectDirectory            = "$CWD"
 FOO = "hello"
 
 excludeFilesInBrowser       = "{$excludeFilesInBrowser,*.class,*.jar}"
-excludeDirectoriesInBrowser = "{$excludeDirectoriesInBrowser,classes,lib}"
-excludeInFileChooser        = "{$excludeInFileChooser,classes,lib,scaladoc,*.jar}"
-excludeInFolderSearch       = "{$excludeInFolderSearch,classes,lib,scaladoc,*.jar}" 
+excludeDirectoriesInBrowser = "{$excludeDirectoriesInBrowser,target}"
+excludeInFileChooser        = "{$excludeInFileChooser,target,*.jar}"
+excludeInFolderSearch       = "{$excludeInFolderSearch,target,*.jar}" 
 
 TM_TODO_IGNORE       = '(?:project/|target/)'
 
