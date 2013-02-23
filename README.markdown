@@ -6,11 +6,13 @@ By using closures when defining command line switches your code becomes much eas
 
 ## Maven Information ##
     groupId:     org.sellmerfud
-    artifactId:  optparse_2.10
+    artifactId:  optparse_2.10, optparse_2.9.2
     version:     2.0
     
 ## Sbt Configuration ##
     libraryDependencies += "org.sellmerfud" % "optparse_2.10" % "2.0"
+    -- or --
+    libraryDependencies += "org.sellmerfud" % "optparse_2.9.2" % "2.0"
 
     // And if Sonatype isn't in your list of resolvers, for some reason:
     resolvers += "Sonatype Nexus releases" at "https://oss.sonatype.org/content/repositories/releases"
@@ -18,9 +20,9 @@ By using closures when defining command line switches your code becomes much eas
     
 ## Earlier Versions ##
 If you are using version 1.0 of this library [click here to see the README][README 1.0] for that version.
-The api in version 2.0 has changed and is not code compatible with version 1.0.  Also, 2.0 is build
-agains Scala 2.10 and is not compatible with earlier versions of Scala. If you are using a Scala version 
-prior to 2.10, then use the 1.0 version of this library.
+The api in version 2.0 has changed and is not code compatible with version 1.0.  Also the master branch
+is built against Scala 2.10 and is not compatible with earlier versions of Scala. 
+If you are using a Scala version prior to 2.9.2, then use the 1.0 version of this library.
 
 [README 1.0]: https://github.com/sellmerfud/optparse/blob/master/README-1.0.markdown
     
