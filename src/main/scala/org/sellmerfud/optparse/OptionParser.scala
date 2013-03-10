@@ -65,10 +65,10 @@ import scala.reflect.ClassTag
  * expected type. The type `C` is your configuration class that was specified when the OptionParser
  * was instantiated.
  * {{{
- * case class Config(revision: Int = 0, args: List[String] = Nil)
+ * case class Config(revision: Int = 0, args: Vector[String] = Vector.empty)
  * val cli = new OptionParser[Config] {
  *   reqd[Int]("-r", "--revision NUM", "Choose revision") { (value, cfg) => cfg.copy(revision = value) }
- *   args[String] { (args, cfg) => cfg.copy(args = args) }
+ *   arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
  * }
  * val config = cli.parse(List("-r", "9"), Config())
  * }}}
@@ -80,7 +80,7 @@ import scala.reflect.ClassTag
  *
  * == Non-Switch Arguments ==
  * Anything encountered on the command line that is not a switch or an argument to a switch is 
- * passed to the function supplied to the `args()` method.  Like switch arguments, the non-switch
+ * passed to the function supplied to the `arg()` method.  Like switch arguments, the non-switch
  * arguments can be of any type for which you have a defined argument parser.  In the example
  * above we have specified that non-switch arguments are of type `String`.
  *
@@ -283,7 +283,7 @@ import scala.reflect.ClassTag
  *       base:     String         = "HEAD",
  *       date:     Date           = new Date(),
  *       libs:     List[String]   = Nil,
- *       fileArgs: List[String]   = Nil)
+ *       fileArgs: Vector[String] = Vector.empty)
  *
  *     val config = try {
  *       new OptionParser[Config] {
@@ -316,8 +316,8 @@ import scala.reflect.ClassTag
  *         optl[String]("-b", "--base[=<commit>]", "Set the base commit. Default is HEAD.")
  *           { (v, c) => c.copy(base = v getOrElse "HEAD") }
  *
- *         args[String] { (v, c) => c.copy(fileArgs = v) }
- *       }.parse(args, Config)
+ *         arg[String] { (v, c) => c.copy(fileArgs = c.fileArgs :+ v) }
+ *       }.parse(args, Config())
  *     }
  *     catch { case e: OptionParserException => println(e.getMessage); java.lang.System.exit(1) }
  * 
@@ -328,7 +328,7 @@ import scala.reflect.ClassTag
  * Command Line: -l /etc/foo --lib=/tmp/bar -x .profile -n Bob -d09-11-2001
  * -------------------------------------------------------------------------------
  * config: Config(false,true,Some(Bob),binary,HEAD,Tue Sep 11 00:00:00 CDT 2001,
- *                List(/etc/foo, /tmp/bar), List(.profile))
+ *                List(/etc/foo, /tmp/bar), Vector(.profile))
  *
  * Command Line: --date=04/01/2011
  * -------------------------------------------------------------------------------
@@ -341,7 +341,7 @@ import scala.reflect.ClassTag
  * Command Line: --ty=a
  * -------------------------------------------------------------------------------
  * config: Config(false,false,None,ascii,HEAD,Mon Feb 11 21:52:12 CST 2013,
- *                List(), List())
+ *                List(), Vector())
  * }}}
  *
  * @author Curt Sellmer
@@ -358,7 +358,7 @@ class OptionParser[C] {
   var auto_help = true
   
   private val switches = new ListBuffer[Switch]
-  private var argsHandler: Option[ArgsHandler[_]] = None
+  private var argHandler: Option[ArgHandler[_]] = None
   
   /** Returns the formatted help text as a String */
   def help: String = {
@@ -424,12 +424,12 @@ class OptionParser[C] {
   def list[T](short: String, long: String, info: String*)(func: (List[T], C) => C)(implicit m: ClassTag[T]): Unit =
     addSwitch(new ListArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
-  /** Provide a function that will be called with the list of non-switch arguments that
-  *   are encountered on the command line.
+  /** Provide a function that will be called with each non-switch argument as it is
+  *   encountered on the command line.
   */
-  def args[T](func: (List[T], C) => C)(implicit m: ClassTag[T]): Unit =
-    argsHandler = Some(new ArgsHandler(arg_parser(m), func))
-  
+  def arg[T](func: (T, C) => C)(implicit m: ClassTag[T]): Unit =
+    argHandler = Some(new ArgHandler(arg_parser(m), func))
+    
   /**
    * Parse the given command line. 
    * Each token from the command line should be in a separate entry in the given sequence such
@@ -442,7 +442,6 @@ class OptionParser[C] {
   def parse(args: Seq[String], config: C): C = {
     var _config       = config
     val argv          = new ListBuffer[String] ++ args
-    val nonSwitchArgs = new ListBuffer[String]
     var arg_display   = ""  // Used for error reporting
     
     // Pluck a switch argument from argv. If greedy we always take it.
@@ -511,9 +510,9 @@ class OptionParser[C] {
       nextToken match {
         case Terminate() =>
           // Process any remaining non-switch arguments (after --)
-          nonSwitchArgs ++= argv
+          for (h <- argHandler; arg <- argv) _config = coercingExceptions(arg)(h.process(arg, _config))
         case NonSwitch(arg) => 
-          nonSwitchArgs += arg
+          for (h <- argHandler) _config = coercingExceptions(arg)(h.process(arg, _config))
           processTokens
         case SwitchToken(switch, longForm, joinedArg, negated) =>
           var arg = (joinedArg, switch.takesArg, longForm) match {
@@ -523,16 +522,13 @@ class OptionParser[C] {
             case (None,    false, _)     => None
             case (None,    true,  _)     => pluckArg(switch.requiresArg)
           }
-          _config = switch.process(arg, negated, arg_display, _config)
+          _config = coercingExceptions(arg_display)(switch.process(arg, negated, _config))
           processTokens
       }
     }
 
     add_auto_help()
     processTokens()
-    if (nonSwitchArgs.nonEmpty)
-      for (h <- argsHandler)
-       _config = h.process(nonSwitchArgs.toList, _config)
     _config
   }
   
@@ -558,17 +554,17 @@ class OptionParser[C] {
    * If you add a parser for a type that already has a parser, the existing parser will be replaced.
    */
   def addArgumentParser[T](f: String => T)(implicit m: ClassTag[T]): Unit = {
-    val wrapped = { (s: String, arg_display: String) =>
-      try { f(s) } 
-      catch { 
-        // Convert to internal exceptions so we can prefix the message with the erroneous input.
-        case e: InvalidArgumentException   => throw new InvalidArgument(e, arg_display)
-        case e: AmbiguousArgumentException => throw new AmbiguousArgument(e, arg_display)
-      } 
-    }
-    arg_parsers = (m -> wrapped) :: arg_parsers
+    arg_parsers = (m -> f) :: arg_parsers
   }
-    
+  
+  // Coerce our exceptions so we can prefix the message with the erroneous input.
+  private def coercingExceptions[T](disp: String)(code: => T): T =
+    try code
+    catch {
+      case e: InvalidArgumentException   => throw new InvalidArgument(e, disp)
+      case e: AmbiguousArgumentException => throw new AmbiguousArgument(e, disp)
+    }
+
   private class ArgumentMissing(arg_display: String) extends OptionParserException("argument missing: " + arg_display)
   private class InvalidArgument(m: String, arg_display: String) extends OptionParserException("invalid argument: " + arg_display + m) {
     def this(e: InvalidArgumentException, arg_display: String) = 
@@ -612,7 +608,7 @@ class OptionParser[C] {
     // Called when this switch is detected on the command line.  Should handle the
     // invocation of the user's code to process this switch.
     //   negated param only used by BoolSwitch
-    def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C
+    def process(arg: Option[String], negated: Boolean, config: C): C
     
     override lazy val toString = {
       val sw   = "    " + names
@@ -623,12 +619,12 @@ class OptionParser[C] {
   }
   
   private class Separator(text: String) extends Switch(Names("", "", ""), Seq()) {
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = config
+    override def process(arg: Option[String], negated: Boolean, config: C): C = config
     override lazy val toString = text
   }
   
   private class NoArgSwitch(n: Names, d: Seq[String], func: (C) => C) extends Switch(n, d) {
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = func(config)
+    override def process(arg: Option[String], negated: Boolean, config: C): C = func(config)
   }
   
   private class BoolSwitch(n: Names, d: Seq[String], func: (Boolean, C) => C) extends Switch(n, d) {
@@ -638,39 +634,39 @@ class OptionParser[C] {
     // Return true if the given lname is a prefix match for our negated name.
     override def negatedMatch(lname: String) = names.longNegated.startsWith(lname)
     
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = func(!negated, config)
+    override def process(arg: Option[String], negated: Boolean, config: C): C = func(!negated, config)
   }
   
-  private class ArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String, String) => T, func: (T, C) => C) extends Switch(n, d) {
+  private class ArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String) => T, func: (T, C) => C) extends Switch(n, d) {
     override val takesArg    = true
     override val requiresArg = true
     
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = arg match {
+    override def process(arg: Option[String], negated: Boolean, config: C): C = arg match {
       case None => throw new RuntimeException("Internal error - no arg for ArgSwitch")
-      case Some(a) => func(parse_arg(a, arg_display), config)
+      case Some(a) => func(parse_arg(a), config)
     }
   }
 
-  private class OptArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String, String) => T, func: (Option[T], C) => C) extends Switch(n, d) {
+  private class OptArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String) => T, func: (Option[T], C) => C) extends Switch(n, d) {
     override val takesArg = true
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = 
-      func(arg.map(a => parse_arg(a, arg_display)), config)
+    override def process(arg: Option[String], negated: Boolean, config: C): C = 
+      func(arg.map(a => parse_arg(a)), config)
   }
   
-  private class ListArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String, String) => T, func: (List[T], C) => C) extends Switch(n, d) {
+  private class ListArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String) => T, func: (List[T], C) => C) extends Switch(n, d) {
     override val takesArg    = true
     override val requiresArg = true
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = arg match {
+    override def process(arg: Option[String], negated: Boolean, config: C): C = arg match {
       case None => throw new RuntimeException("Internal error - no arg for ListArgSwitch")
-      case Some(argList) => func(argList.split(",").toList.map(a => parse_arg(a, arg_display  )), config)
+      case Some(argList) => func(argList.split(",").toList.map(a => parse_arg(a)), config)
     }
   }
-    
-  private class ArgsHandler[T](parse_arg: (String, String) => T, func: (List[T], C) => C) {
-    def process(args: List[String], config: C): C = 
-      func(args map (a => parse_arg(a, a)), config)
-  }
   
+  // For one arg at at time.
+  private class ArgHandler[T](parse_arg: (String) => T, func: (T, C) => C) {
+    def process(arg: String, config: C): C = 
+      func(parse_arg(arg), config)
+  }
   
   // Class to hold a list of valid values. Maps the string representation to it's actual value.
   // Support partial matching on the strings
@@ -678,12 +674,12 @@ class OptionParser[C] {
     def this(l: Seq[T]) = this(l.toList.map(v => (v.toString, v)))
     def this(m: Map[String, T]) = this(m.toList)
     
-    def get(arg: String, arg_display: String): T = {
+    def get(arg: String): T = {
       def display(l: List[(String, T)]): String = "    (%s)".format(l.map(_._1).mkString(", "))
       vals.filter(_._1.startsWith(arg)).sortWith(_._1.length < _._1.length) match {
         case x :: Nil => x._2
-        case x :: xs  => if (x._1 == arg) x._2 else throw new AmbiguousArgument(display(x :: xs), arg_display)
-        case Nil => throw new InvalidArgument(display(vals), arg_display)
+        case x :: xs  => if (x._1 == arg) x._2 else throw new AmbiguousArgumentException(display(x :: xs))
+        case Nil => throw new InvalidArgumentException(display(vals))
       }
     }
   }
@@ -692,16 +688,16 @@ class OptionParser[C] {
     override val takesArg    = true
     override val requiresArg = true
     
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C = arg match {
+    override def process(arg: Option[String], negated: Boolean, config: C): C = arg match {
       case None => throw new RuntimeException("Internal error - no arg for ArgSwitchWithVals")
-      case Some(a) => func(vals.get(a, arg_display), config)
+      case Some(a) => func(vals.get(a), config)
     }
   }
 
   private class OptArgSwitchWithVals[T](n: Names, d: Seq[String], vals: ValueList[T], func: (Option[T], C) => C) extends Switch(n, d) {
     override val takesArg = true
-    override def process(arg: Option[String], negated: Boolean, arg_display: String, config: C): C =
-      func(arg.map(a => vals.get(a, arg_display)), config)
+    override def process(arg: Option[String], negated: Boolean, config: C): C =
+      func(arg.map(a => vals.get(a)), config)
   }
 
   // Add a new switch to the list.  If any existing switch has the same short or long name
@@ -769,12 +765,12 @@ class OptionParser[C] {
   }
     
   // A list of registered argument parsers
-  private var arg_parsers = List[(ClassTag[_], (String, String) => _)]()
+  private var arg_parsers = List[(ClassTag[_], (String) => _)]()
   
   // Look up an argument parser given a ClassTag.
   // Throws an exception if not found.
-  private def arg_parser[T](m: ClassTag[T]): (String, String) => T = {
-    arg_parsers.find(m == _._1).map(_._2.asInstanceOf[(String, String) => T]).getOrElse {
+  private def arg_parser[T](m: ClassTag[T]): (String) => T = {
+    arg_parsers.find(m == _._1).map(_._2.asInstanceOf[(String) => T]).getOrElse {
       throw new OptionParserException("No argument parser found for " + m)
     }
   }

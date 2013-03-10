@@ -55,10 +55,10 @@ expected type. The type `C` is your configuration class that was specified when 
 was instantiated.
 
 ```scala
-case class Config(revision: Int = 0, args: List[String] = Nil)
+case class Config(revision: Int = 0, args: Vector[String] = Vector.empty)
 val cli = new OptionParser[Config] {
   reqd[Int]("-r", "--revision NUM", "Choose revision") { (value, cfg) => cfg.copy(revision = value) }
-  args[String] { (args, cfg) => cfg.copy(args = args) }
+  arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
 }
 val config = cli.parse(List("-r", "9"), Config())
 ```
@@ -70,7 +70,7 @@ Here we return a copy of our configuration class with the `revision` field updat
 
 ## Non-Switch Arguments ##
 Anything encountered on the command line that is not a switch or an argument to a switch is 
-passed to the function supplied to the `args()` method.  Like switch arguments, the non-switch
+passed to the function supplied to the `arg()` method.  Like switch arguments, the non-switch
 arguments can be of any type for which you have a defined argument parser.  In the example
 above we have specified that non-switch arguments are of type `String`.
 
@@ -285,7 +285,7 @@ object Sample {
     base:     String         = "HEAD",
     date:     Date           = new Date(),
     libs:     List[File]     = Nil,
-    fileArgs: List[String]   = Nil)
+    fileArgs: Vector[String] = Vector.empty)
 
   def main(args: Array[String]) {
     val config = try {
@@ -319,7 +319,7 @@ object Sample {
         optl[String]("-b", "--base[=<commit>]", "Set the base commit. Default is HEAD.")
           { (v, c) => c.copy(base = v getOrElse "HEAD") }
           
-        args[String] { (v, c) => c.copy(fileArgs = v) }  
+        arg[String] { (v, c) => c.copy(fileArgs = c.fileArgs :+ v) }  
       }.parse(args, Config())
     }
     catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }

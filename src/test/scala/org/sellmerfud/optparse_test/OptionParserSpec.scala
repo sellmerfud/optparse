@@ -124,12 +124,12 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   // ====================================================================================
 
   it should "remove switches with identical names when adding a new switch" in {
-    case class Config(notUsed: Boolean = false, notUsed2: Boolean = false, expert: Boolean = false, args: List[String] = Nil)
+    case class Config(notUsed: Boolean = false, notUsed2: Boolean = false, expert: Boolean = false, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       flag("-x", "--notUsed") { (cfg) => cfg.copy(notUsed = true) }
       flag("-X", "--expert")  { (cfg) => cfg.copy(notUsed2 = true) }
       flag("-x", "--expert")  { (cfg) => cfg.copy(expert = true) }
-      args[String] { (args, cfg) => cfg.copy(args = args ) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg ) }
     }
 
     val config = cli.parse(Seq("-x"), Config())
@@ -161,7 +161,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   // ====================================================================================
 
   "Commmand line parsing" should "handle empty argv" in {
-    case class Config(name: Option[String] = None, expert: Boolean = false, args: List[String] = Nil)
+    case class Config(name: Option[String] = None, expert: Boolean = false, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       flag("-x", "--expert") { (cfg) => cfg.copy(expert = true) }
       reqd[String]("-n", "--name NAME") { (name, cfg) => cfg.copy(name = Some(name)) }
@@ -177,20 +177,20 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   
   it should "handle arg list without any switches" in {
     import java.io.File
-    case class Config(name: Option[String] = None, expert: Boolean = false, args: List[File] = Nil)
+    case class Config(name: Option[String] = None, expert: Boolean = false, args: Vector[File] = Vector.empty)
     val cli = new OptionParser[Config] {
       flag("-x", "--expert") { (cfg) => cfg.copy(expert = true) }
       reqd[String]("-n", "--name NAME") { (name, cfg) => cfg.copy(name = Some(name)) }
-      args[File] { (args, cfg) => cfg.copy(args = args ) }
+      arg[File] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg ) }
     }
 
     val c1 = cli.parse(Seq("foo"), Config())
-    c1.args should be === (List(new File("foo")))
+    c1.args should be === (Vector(new File("foo")))
     c1.name   should be (None)
     c1.expert should be === (false)
   
     val c2 = cli.parse(Seq("foo", "bar"), Config())
-    c2.args should be === (List(new File("foo"), new File("bar")))
+    c2.args should be === (Vector(new File("foo"), new File("bar")))
     c2.name   should be (None)
     c2.expert should be === (false)
   }    
@@ -202,7 +202,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser[Config] {
       flag("-x", "--expert") { (cfg) => cfg.copy(expert = true) }
       bool("-t", "--timestamp") { (v, cfg) => cfg.copy(timestamp = Some(v)) }
-      args[String] { (arg, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     // Short
@@ -239,7 +239,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config(test: Boolean = false)
     val cli = new OptionParser[Config] {
       flag("-t", "--test") { (cfg) => cfg.copy(test = true) }
-      args[String] { (arg, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
     
     val t1 = evaluating { cli.parse(Seq("-x"), Config()) } should produce [OptionParserException]
@@ -265,7 +265,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       flag("", "--list") { (cfg) => cfg.copy(list = true) }
       flag("", "--nice") { (cfg) => cfg.copy(nice = true) }
       bool("", "--quiet") { (v, cfg) => cfg.copy(quiet = Some(v)) }
-      args[String] { (arg, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
     
     val c1 = cli.parse(Seq("--l", "--tex"), Config())
@@ -306,7 +306,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config(timestamp: Boolean = false)
     val cli = new OptionParser[Config] {
       bool("-t", "--timestamp") { (v, cfg) => cfg.copy(timestamp = v) }
-      args[String] { (arg, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
     
     val c1 = cli.parse(Seq("-t"), Config())
@@ -326,7 +326,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser[Config] {
       list[String]("-n", "--names") { (names, cfg) => cfg.copy(names = names) }
       list[Int]("-s", "--sizes")    { (sizes, cfg) => cfg.copy(sizes = sizes) }
-      args[String] { (arg, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
     
     val c1 = cli.parse(Seq("-nlarry,moe,curly"), Config())
@@ -358,7 +358,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     val cli = new OptionParser[Config] {
       flag("-x", "--expert") { (cfg) => cfg.copy(expert = true) }
       bool("-t", "--timestamp") { (v, cfg) => cfg.copy(timestamp = v) }
-      args[String] { (arg, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     val t1 = evaluating { cli.parse(Seq("--expert=yes"), Config()) } should produce [OptionParserException]
@@ -375,30 +375,30 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       name: Option[String] = None,
       expert: Boolean = false,
       text: Boolean = false,
-      args: List[String] = Nil)
+      args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       reqd[String]("-n NAME", "") { (name, cfg) => cfg.copy(name = Some(name)) }
       flag("-x", "") { (cfg) => cfg.copy(expert = true) }
       flag("-t", "") { (cfg) => cfg.copy(text = true) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
     
     val c1 = cli.parse(Seq("-n", "curt", "foo"), Config())
-    c1.args should be === (List("foo"))
+    c1.args should be === (Vector("foo"))
     c1.name should be === (Some("curt"))
 
     val c2 = cli.parse(Seq("-ncurt", "foo"), Config())
-    c2.args should be === (List("foo"))
+    c2.args should be === (Vector("foo"))
     c2.name should be === (Some("curt"))
 
     val c3 = cli.parse(Seq("-xtn", "curt", "foo"), Config())
-    c3.args should be === (List("foo"))
+    c3.args should be === (Vector("foo"))
     c3.name should be === (Some("curt"))
     c3.expert should be === (true)
     c3.text should be === (true)
     
     val c4 = cli.parse(Seq("-xtncurt", "foo"), Config())
-    c4.args should be === (List("foo"))
+    c4.args should be === (Vector("foo"))
     c4.name should be === (Some("curt"))
     c4.expert should be === (true)
     c4.text should be === (true)
@@ -413,19 +413,19 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   // ====================================================================================
 
   it should "handle long switches with required arguments" in {
-    case class Config(name: Option[String] = None, args: List[String] = Nil)
+    case class Config(name: Option[String] = None, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       reqd[String]("", "--name NAME") { (name, cfg) => cfg.copy(name = Some(name)) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
     
     val c1 = cli.parse(Seq("--name", "curt", "foo"), Config())
     c1.name should be === Some("curt")
-    c1.args should be === List("foo")
+    c1.args should be === Vector("foo")
 
     val c2 = cli.parse(Seq("--name=curt", "foo"), Config())
     c2.name should be === Some("curt")
-    c2.args should be === List("foo")
+    c2.args should be === Vector("foo")
     
     val t1 = evaluating { cli.parse(Seq("--name"), Config()) } should produce [OptionParserException]
     t1.getMessage should startWith (ARGUMENT_MISSING)
@@ -435,20 +435,20 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
   it should "handle switches with String and File arguments" in {
     import java.io.File
-    case class Config(string: Option[String] = None, file: Option[File] = None, args: List[String] = Nil)
+    case class Config(string: Option[String] = None, file: Option[File] = None, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       reqd[String]("-s", "--string ARG") { (s, cfg) => cfg.copy(string = Some(s)) }
       reqd[File]  ("-f", "--file FILE")  { (f, cfg) => cfg.copy(file = Some(f)) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
 
     val c1 = cli.parse(Seq("-s", "hello", "foo", "-f", "/etc/passwd"), Config())
-    c1.args should be === List("foo")
+    c1.args should be === Vector("foo")
     c1.string should be === Some("hello")
     c1.file should be === Some(new File("/etc/passwd"))
 
     val c2 = cli.parse(Seq("-f/etc/passwd"), Config())
-    c2.args should be === Nil
+    c2.args should be === Vector.empty
     c2.string should be === None
     c2.file should be === Some(new File("/etc/passwd"))
   }
@@ -459,7 +459,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config(char: Char = 0.toChar)
     val cli = new OptionParser[Config] {
       reqd[Char]("-c", "--char ARG")   { (c, cfg) => cfg.copy(char = c) }
-      args[String] { (args, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
     
     // Single char
@@ -548,7 +548,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       reqd[Long]  ("-l", "--long ARG")   { (v, cfg) => cfg.copy(long   = v) }
       reqd[Float] ("-f", "--float ARG")  { (v, cfg) => cfg.copy(float  = v) }
       reqd[Double]("-d", "--double ARG") { (v, cfg) => cfg.copy(double = v) }
-      args[String] { (args, cfg) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
 
@@ -627,146 +627,146 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   // ====================================================================================
   
   it should "terminate switch processing with --" in {
-    case class Config(incr: Int = 1, args: List[String] = Nil)
+    case class Config(incr: Int = 1, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       reqd[Int]("-i", "--incr ARG")    { (v, cfg) => cfg.copy(incr = v) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
 
     val c1 = cli.parse(Seq("-i", "9", "foo", "--", "-i", "10"), Config())
     c1.incr should be === (9)
-    c1.args should be === List("foo", "-i", "10")
+    c1.args should be === Vector("foo", "-i", "10")
     
     val c2 = cli.parse(Seq("--incr", "9", "foo", "--", "--incr", "10"), Config())
     c2.incr should be === (9)
-    c2.args should be === List("foo", "--incr", "10")
+    c2.args should be === Vector("foo", "--incr", "10")
   }
   
   // ====================================================================================
   
   it should "allow '-' as an argument (ie. stdin)" in {
-    case class Config(file: String = "", args: List[String] = Nil)
+    case class Config(file: String = "", args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       reqd[String]("-f", "--file ARG")    { (v, cfg) => cfg.copy(file = v) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
 
     val c1 = cli.parse(Seq("-"), Config())
     c1.file should be === ("")
-    c1.args should be === List("-")
+    c1.args should be === Vector("-")
     
     val c2 = cli.parse(Seq("-f", "-"), Config())
     c2.file should be === ("-")
-    c2.args should be === Nil
+    c2.args should be === Vector.empty
     
     val c3 = cli.parse(Seq("-f-"), Config())
     c3.file should be === ("-")
-    c3.args should be === Nil
+    c3.args should be === Vector.empty
 
     val c4 = cli.parse(Seq("--file", "-"), Config())
     c4.file should be === ("-")
-    c4.args should be === Nil
+    c4.args should be === Vector.empty
 
     val c5 = cli.parse(Seq("--file=-"), Config())
     c5.file should be === ("-")
-    c5.args should be === Nil
+    c5.args should be === Vector.empty
   }
   
   // ====================================================================================
   
   it should "handle short switches with optional arguments" in {
-    case class Config(expert: Boolean = false, dir: Option[String] = None, args: List[String] = Nil)
+    case class Config(expert: Boolean = false, dir: Option[String] = None, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       flag("-x", "")               { (cfg) => cfg.copy(expert = true) }
       optl[String]("-d [VAL]", "") { (dir, cfg) => cfg.copy(dir = dir orElse Some("/tmp")) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
 
     val c1 = cli.parse(Seq("-d", "/etc", "foo"), Config())
     c1.expert should be === (false)
     c1.dir    should be === Some("/etc")
-    c1.args   should be === List("foo")
+    c1.args   should be === Vector("foo")
 
     val c2 = cli.parse(Seq("-d/etc", "foo"), Config())
     c2.expert should be === (false)
     c2.dir    should be === Some("/etc")
-    c2.args   should be === List("foo")
+    c2.args   should be === Vector("foo")
     
     val c3 = cli.parse(Seq("-xd", "/etc", "foo"), Config())
     c3.expert should be === (true)
     c3.dir    should be === Some("/etc")
-    c3.args   should be === List("foo")
+    c3.args   should be === Vector("foo")
 
     val c4 = cli.parse(Seq("-xd/etc", "foo"), Config())
     c4.expert should be === (true)
     c4.dir    should be === Some("/etc")
-    c4.args   should be === List("foo")
+    c4.args   should be === Vector("foo")
 
     // -- marks end of options (it would be eaten if the switch REQUIRED and argument!)
     val c5 = cli.parse(Seq("-xd", "--", "foo"), Config())
     c5.expert should be === (true)
     c5.dir    should be === Some("/tmp")  // <<--- Default value
-    c5.args   should be === List("foo")
+    c5.args   should be === Vector("foo")
 
     // Optional args should not eat an arg that looks like a switch
     val c6 = cli.parse(Seq("-d", "-x", "foo"), Config())
     c6.expert should be === (true)
     c6.dir    should be === Some("/tmp")  // <<--- Default value
-    c6.args   should be === List("foo")
+    c6.args   should be === Vector("foo")
 
     // Optional args should use '-' as an argument.
     val c7 = cli.parse(Seq("-d", "-", "foo"), Config())
     c7.expert should be === (false)
     c7.dir    should be === Some("-")
-    c7.args   should be === List("foo")
+    c7.args   should be === Vector("foo")
 
     val c8 = cli.parse(Seq("-d"), Config())
     c8.expert should be === (false)
     c8.dir    should be === Some("/tmp")  // <<--- Default value
-    c8.args   should be === Nil
+    c8.args   should be === Vector.empty
   }
 
   // ====================================================================================
 
   it should "handle long switches with optional arguments" in {
-    case class Config(expert: Boolean = false, at: Option[String] = None, args: List[String] = Nil)
+    case class Config(expert: Boolean = false, at: Option[String] = None, args: Vector[String] = Vector.empty)
     val cli = new OptionParser[Config] {
       flag("-x",  "--expert")  { (cfg) => cfg.copy(expert = true) }
       optl[String]("", "--at [AT]") { (at, cfg) => cfg.copy(at = at orElse(Some("00:00"))) }
-      args[String] { (args, cfg) => cfg.copy(args = args) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
     }
 
     val c1 = cli.parse(Seq("--at", "1:30", "foo"), Config())
     c1.expert should be === (false)
     c1.at     should be === Some("1:30")
-    c1.args   should be === List("foo")
+    c1.args   should be === Vector("foo")
 
     val c2 = cli.parse(Seq("--at=1:30", "foo"), Config())
     c2.expert should be === (false)
     c2.at     should be === Some("1:30")
-    c2.args   should be === List("foo")
+    c2.args   should be === Vector("foo")
 
     // Optional args shouldn't eat an option name looking arg
     val c3 = cli.parse(Seq("--at", "-x", "foo"), Config())
     c3.expert should be === (true)
     c3.at     should be === Some("00:00")
-    c3.args   should be === List("foo")
+    c3.args   should be === Vector("foo")
         
     // Optional args should eat an option name looking arg if it is attached
     val c4 = cli.parse(Seq("--at=-x", "foo"), Config())
     c4.expert should be === (false)
     c4.at     should be === Some("-x")
-    c4.args   should be === List("foo")
+    c4.args   should be === Vector("foo")
 
     val c5 = cli.parse(Seq("--at", "--", "foo"), Config())
     c5.expert should be === (false)
     c5.at     should be === Some("00:00")
-    c5.args   should be === List("foo")
+    c5.args   should be === Vector("foo")
 
     val c6 = cli.parse(Seq("--at"), Config())
     c6.expert should be === (false)
     c6.at     should be === Some("00:00")
-    c6.args   should be === Nil
+    c6.args   should be === Vector.empty
   }
   
   // ====================================================================================
@@ -775,7 +775,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config(name: Option[String] = None)
     val cli = new OptionParser[Config] {
       reqd[String]("-n",  "--name NAME")  { (s, cfg) => cfg.copy(name = Some(s)) }
-      args[String] { (_, _) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     val c1 = cli.parse(Seq("--name="), Config())
@@ -790,7 +790,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       flag        ("-x",  "--expert")  { (cfg) => cfg.copy(expert = true) }
       reqd[String]("-g", "--gist TEXT", "Set Gist") { (gist, cfg) => cfg.copy(gist = Some(gist)) }
       optl[String]("-j", "--jazz [TEXT]", "Set Jazz") { (jazz, cfg) => cfg.copy(jazz = jazz orElse Some("bebop")) }
-      args[String] { (_, _) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     // Required argument
@@ -824,7 +824,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       flag        ("-x",  "--expert")  { (cfg) => cfg.copy(expert = true) }
       reqd[String]("-g", "--gist TEXT", "Set Gist") { (gist, cfg) => cfg.copy(gist = Some(gist)) }
       optl[String]("-j", "--jazz [TEXT]", "Set Jazz") { (jazz, cfg) => cfg.copy(jazz = jazz orElse Some("bebop")) }
-      args[String] { (_, _) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     // Required argument
@@ -859,7 +859,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       addArgumentParser[Foo] { s: String => Foo(s) }
       reqd[Foo]("", "--foo1") { (foo, cfg) => cfg.copy(foo1 = Some(foo)) }
       optl[Foo]("", "--foo2") { (foo, cfg) => cfg.copy(foo2 = foo orElse Some(Foo("Default"))) }
-      args[String] { (_, _) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     val c1 = cli.parse(Seq("--foo1", "46"), Config())
@@ -881,7 +881,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config(theType: Option[String] = None)
     val cli = new OptionParser[Config] {
       reqd[String]("-t", "--type (binary, ascii)", List("binary", "ascii", "auto")) { (t, cfg) => cfg.copy(theType = Some(t)) }
-      args[String] { (_, _) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     val c1 = cli.parse(Seq("-t", "binary"), Config())
@@ -904,7 +904,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config(zone: Int = 0)
     val cli = new OptionParser[Config] {
       optl[Int]("-z", "--zone", Map("one" -> 1, "two" -> 2, "three" -> 3)) { (z, cfg) => cfg.copy(zone = z getOrElse 1) }
-      args[String] { (_, _) => throw new Exception("args() should not be called!") }
+      arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
     val c1 = cli.parse(Seq("-z"), Config())
