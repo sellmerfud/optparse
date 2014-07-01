@@ -22,12 +22,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 package org.sellmerfud.optparse_test
 
-import _root_.org.scalatest.FlatSpec
-import _root_.org.scalatest.matchers.ShouldMatchers
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
 
 import org.sellmerfud.optparse._
 
-class OptionParserSpec extends FlatSpec with ShouldMatchers {
+class OptionParserSpec extends FlatSpec with Matchers {
   val ARGUMENT_MISSING   = "argument missing:"
   val INVALID_ARGUMENT   = "invalid argument:"
   val AMBIGUOUS_ARGUMENT = "ambiguous argument:"
@@ -45,10 +45,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   "Defining switches" should "fail if both names are empty" in {
     case class Config()
     val cli = new OptionParser[Config]
-    val thrown = evaluating {
+    the [OptionParserException] thrownBy {
       cli.flag("", "  ") { (cfg) => cfg }
-    } should produce [OptionParserException]
-    thrown.getMessage should be === (BOTH_BLANK)
+    } should have message BOTH_BLANK
   }
   
   // ====================================================================================
@@ -57,14 +56,14 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config()
     val cli = new OptionParser[Config]
     // Missing leading dash
-    val t1 = evaluating { cli.flag("a", "") { (cfg) => cfg } } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.flag("a", "") { (cfg) => cfg }
     t1.getMessage should startWith (INVALID_SHORT_NAME)
   
     // Must be only one character
-    val t2 = evaluating { cli.flag("-ab", "") { (cfg) => cfg } } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.flag("-ab", "") { (cfg) => cfg }
     t2.getMessage should startWith (INVALID_SHORT_NAME)
     
-    val t3 = evaluating { cli.flag("-ab ARG", "") { (cfg) => cfg } } should produce [OptionParserException]
+    val t3 = the [OptionParserException] thrownBy cli.flag("-ab ARG", "") { (cfg) => cfg }
     t3.getMessage should startWith (INVALID_SHORT_NAME)
   }
   
@@ -73,26 +72,26 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   it should "fail if the long name is not specified correctly" in {
     case class Config()
     val cli = new OptionParser[Config]
-    val t1 = evaluating { cli.flag("", "name") { (cfg) => cfg } } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.flag("", "name") { (cfg) => cfg }
     t1.getMessage should startWith (INVALID_LONG_NAME)
     
-    val t2 = evaluating { cli.flag("", "-name") { (cfg) => cfg } } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.flag("", "-name") { (cfg) => cfg }
     t2.getMessage should startWith (INVALID_LONG_NAME)
 
-    val t3 = evaluating { cli.flag("", "name ARG") { (cfg) => cfg } } should produce [OptionParserException]
+    val t3 = the [OptionParserException] thrownBy cli.flag("", "name ARG") { (cfg) => cfg }
     t3.getMessage should startWith (INVALID_LONG_NAME)
     
-    val t4 = evaluating { cli.flag("", "-name ARG") { (cfg) => cfg } } should produce [OptionParserException]
+    val t4 = the [OptionParserException] thrownBy cli.flag("", "-name ARG") { (cfg) => cfg }
     t4.getMessage should startWith (INVALID_LONG_NAME)
 
-    val t5 = evaluating { cli.flag("", "name=ARG") { (cfg) => cfg } } should produce [OptionParserException]
+    val t5 = the [OptionParserException] thrownBy cli.flag("", "name=ARG") { (cfg) => cfg }
     t5.getMessage should startWith (INVALID_LONG_NAME)
     
-    val t6 = evaluating { cli.flag("", "-name=ARG") { (cfg) => cfg } } should produce [OptionParserException]
+    val t6 = the [OptionParserException] thrownBy cli.flag("", "-name=ARG") { (cfg) => cfg }
     t6.getMessage should startWith (INVALID_LONG_NAME)
     
     // --no- prefix is reserved for boolean switches
-    val t7 = evaluating { cli.flag("", "--no-name") { (cfg) => cfg } } should produce [OptionParserException]
+    val t7 = the [OptionParserException] thrownBy cli.flag("", "--no-name") { (cfg) => cfg }
     t7.getMessage should startWith (INVALID_LONG_NAME)
   }
   
@@ -133,16 +132,16 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val config = cli.parse(Seq("-x"), Config())
-    config.notUsed  should be === (false)
-    config.notUsed2 should be === (false)
-    config.expert   should be === (true)
-    config.args     should be ('empty)
+    config.notUsed  shouldBe (false)
+    config.notUsed2 shouldBe (false)
+    config.expert   shouldBe (true)
+    config.args     shouldBe ('empty)
 
     val config2 = cli.parse(Seq("--expert"), Config())
-    config2.notUsed  should be === (false)
-    config2.notUsed2 should be === (false)
-    config2.expert   should be === (true)
-    config2.args     should be ('empty)
+    config2.notUsed  shouldBe (false)
+    config2.notUsed2 shouldBe (false)
+    config2.expert   shouldBe (true)
+    config2.args     shouldBe ('empty)
   }
   
   // ====================================================================================
@@ -150,10 +149,10 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     class SomeClass(name: String)
     case class Config(zoo: Option[SomeClass] = None)
     val cli = new OptionParser[Config]
-
-    evaluating {
+    
+    a [RuntimeException] shouldBe thrownBy {
       cli.reqd[SomeClass]("-z", "--zoo") { (zoo, cfg)  => cfg.copy(zoo = Some(zoo)) }
-    } should produce [RuntimeException]
+    }
   }    
   
   // ====================================================================================
@@ -168,9 +167,9 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
     
     val config = cli.parse(Seq(), Config())
-    config.args   should be ('empty)
-    config.name   should be (None)
-    config.expert should be === (false)
+    config.args   shouldBe ('empty)
+    config.name   shouldBe (None)
+    config.expert shouldBe (false)
   }    
 
   // ====================================================================================
@@ -185,14 +184,14 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("foo"), Config())
-    c1.args should be === (Vector(new File("foo")))
-    c1.name   should be (None)
-    c1.expert should be === (false)
+    c1.args   shouldBe (Vector(new File("foo")))
+    c1.name   shouldBe (None)
+    c1.expert shouldBe (false)
   
     val c2 = cli.parse(Seq("foo", "bar"), Config())
-    c2.args should be === (Vector(new File("foo"), new File("bar")))
-    c2.name   should be (None)
-    c2.expert should be === (false)
+    c2.args   shouldBe (Vector(new File("foo"), new File("bar")))
+    c2.name   shouldBe (None)
+    c2.expert shouldBe (false)
   }    
   
   // ====================================================================================
@@ -207,29 +206,29 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
     // Short
     val c1 = cli.parse(Seq("-x"), Config())
-    c1.expert    should be === (true)
-    c1.timestamp should be (None)
+    c1.expert    shouldBe (true)
+    c1.timestamp shouldBe (None)
   
     val c2 = cli.parse(Seq("-x", "-t"), Config())
-    c2.expert    should be === (true)
-    c2.timestamp should be (Some(true))
+    c2.expert    shouldBe (true)
+    c2.timestamp shouldBe (Some(true))
 
     val c3 = cli.parse(Seq("-xt"), Config())
-    c3.expert    should be === (true)
-    c3.timestamp should be (Some(true))
+    c3.expert    shouldBe (true)
+    c3.timestamp shouldBe (Some(true))
 
     // Long
     val c4 = cli.parse(Seq("--expert"), Config())
-    c4.expert    should be === (true)
-    c4.timestamp should be (None)
+    c4.expert    shouldBe (true)
+    c4.timestamp shouldBe (None)
   
     val c5 = cli.parse(Seq("--expert", "--timestamp"), Config())
-    c5.expert    should be === (true)
-    c5.timestamp should be (Some(true))
+    c5.expert    shouldBe (true)
+    c5.timestamp shouldBe (Some(true))
 
     val c6 = cli.parse(Seq("--expert", "--no-timestamp"), Config())
-    c6.expert    should be === (true)
-    c6.timestamp should be (Some(false))
+    c6.expert    shouldBe (true)
+    c6.timestamp shouldBe (Some(false))
   }
   
   
@@ -242,10 +241,10 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
     
-    val t1 = evaluating { cli.parse(Seq("-x"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("-x"), Config())
     t1.getMessage should startWith (INVALID_OPTION)
     
-    val t2 = evaluating { cli.parse(Seq("--expert"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("--expert"), Config())
     t2.getMessage should startWith (INVALID_OPTION)
   }
   
@@ -270,34 +269,34 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     
     val c1 = cli.parse(Seq("--l", "--tex"), Config())
     
-    c1.text  should be === (true)
-    c1.test  should be === (false)
-    c1.list  should be === (true)
-    c1.nice  should be === (false)
-    c1.quiet should be (None)
+    c1.text  shouldBe (true)
+    c1.test  shouldBe (false)
+    c1.list  shouldBe (true)
+    c1.nice  shouldBe (false)
+    c1.quiet shouldBe (None)
     
-    val t1 = evaluating { cli.parse(Seq("--te"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("--te"), Config())
     t1.getMessage should startWith (AMBIGUOUS_OPTION)
 
-    // options that start with the letter n should be ambiguous with boolean args 
+    // options that start with the letter n shouldBe ambiguous with boolean args 
     // because of the --no-... variant.
-    val t2 = evaluating { cli.parse(Seq("--n"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("--n"), Config())
     t2.getMessage should startWith (AMBIGUOUS_OPTION)
     
     val c2 = cli.parse(Seq("--ni"), Config())
-    c2.text  should be === (false)
-    c2.test  should be === (false)
-    c2.list  should be === (false)
-    c2.nice  should be === (true)
-    c2.quiet should be === (None)
+    c2.text  shouldBe (false)
+    c2.test  shouldBe (false)
+    c2.list  shouldBe (false)
+    c2.nice  shouldBe (true)
+    c2.quiet shouldBe (None)
     
     // Should match --no-quiet
     val c3 = cli.parse(Seq("--no"), Config())
-    c3.text  should be === (false)
-    c3.test  should be === (false)
-    c3.list  should be === (false)
-    c3.nice  should be === (false)
-    c3.quiet should be === (Some(false))
+    c3.text  shouldBe (false)
+    c3.test  shouldBe (false)
+    c3.list  shouldBe (false)
+    c3.nice  shouldBe (false)
+    c3.quiet shouldBe (Some(false))
   }
   
   // ====================================================================================
@@ -310,13 +309,13 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
     
     val c1 = cli.parse(Seq("-t"), Config())
-    c1.timestamp should be === (true)
+    c1.timestamp shouldBe (true)
 
     val c2 = cli.parse(Seq("--timestamp"), Config())
-    c2.timestamp should be === (true)
+    c2.timestamp shouldBe (true)
 
     val c3 = cli.parse(Seq("--no-timestamp"), Config())
-    c3.timestamp should be === (false)
+    c3.timestamp shouldBe (false)
   }
   
   // ====================================================================================
@@ -330,25 +329,25 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
     
     val c1 = cli.parse(Seq("-nlarry,moe,curly"), Config())
-    c1.names should be === (List("larry", "moe", "curly"))
-    c1.sizes should be === (Nil)
+    c1.names shouldBe (List("larry", "moe", "curly"))
+    c1.sizes shouldBe (Nil)
 
     val c2 = cli.parse(Seq("-n", "larry,moe,curly"), Config())
-    c2.names should be === (List("larry", "moe", "curly"))
-    c2.sizes should be === (Nil)
+    c2.names shouldBe (List("larry", "moe", "curly"))
+    c2.sizes shouldBe (Nil)
 
     val c3 = cli.parse(Seq("--names=larry,moe,curly"), Config())
-    c3.names should be === (List("larry", "moe", "curly"))
-    c3.sizes should be === (Nil)
+    c3.names shouldBe (List("larry", "moe", "curly"))
+    c3.sizes shouldBe (Nil)
 
     val c4 = cli.parse(Seq("--names", "larry,moe,curly"), Config())
-    c4.names should be === (List("larry", "moe", "curly"))
-    c4.sizes should be === (Nil)
+    c4.names shouldBe (List("larry", "moe", "curly"))
+    c4.sizes shouldBe (Nil)
 
     // Should work for other known types
     val c5 = cli.parse(Seq("--sizes", "36,24,36"), Config())
-    c5.names should be === (Nil)
-    c5.sizes should be === (List(36,24,36))
+    c5.names shouldBe (Nil)
+    c5.sizes shouldBe (List(36,24,36))
   }
 
   // ====================================================================================
@@ -361,10 +360,10 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
     }
 
-    val t1 = evaluating { cli.parse(Seq("--expert=yes"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("--expert=yes"), Config())
     t1.getMessage should startWith (NEEDLESS_ARGUMENT)
 
-    val t2 = evaluating { cli.parse(Seq("--timestamp=yes"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("--timestamp=yes"), Config())
     t2.getMessage should startWith (NEEDLESS_ARGUMENT)
   }
 
@@ -384,29 +383,29 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
     
     val c1 = cli.parse(Seq("-n", "curt", "foo"), Config())
-    c1.args should be === (Vector("foo"))
-    c1.name should be === (Some("curt"))
+    c1.args shouldBe (Vector("foo"))
+    c1.name shouldBe (Some("curt"))
 
     val c2 = cli.parse(Seq("-ncurt", "foo"), Config())
-    c2.args should be === (Vector("foo"))
-    c2.name should be === (Some("curt"))
+    c2.args shouldBe (Vector("foo"))
+    c2.name shouldBe (Some("curt"))
 
     val c3 = cli.parse(Seq("-xtn", "curt", "foo"), Config())
-    c3.args should be === (Vector("foo"))
-    c3.name should be === (Some("curt"))
-    c3.expert should be === (true)
-    c3.text should be === (true)
+    c3.args shouldBe (Vector("foo"))
+    c3.name shouldBe (Some("curt"))
+    c3.expert shouldBe (true)
+    c3.text shouldBe (true)
     
     val c4 = cli.parse(Seq("-xtncurt", "foo"), Config())
-    c4.args should be === (Vector("foo"))
-    c4.name should be === (Some("curt"))
-    c4.expert should be === (true)
-    c4.text should be === (true)
+    c4.args shouldBe (Vector("foo"))
+    c4.name shouldBe (Some("curt"))
+    c4.expert shouldBe (true)
+    c4.text shouldBe (true)
     
-    val t1 = evaluating { cli.parse(Seq("-n"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("-n"), Config())
     t1.getMessage should startWith (ARGUMENT_MISSING)
     
-    val t2 = evaluating { cli.parse(Seq("-xtn"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("-xtn"), Config())
     t2.getMessage should startWith (ARGUMENT_MISSING)
   }
 
@@ -420,14 +419,14 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
     
     val c1 = cli.parse(Seq("--name", "curt", "foo"), Config())
-    c1.name should be === Some("curt")
-    c1.args should be === Vector("foo")
+    c1.name shouldBe Some("curt")
+    c1.args shouldBe Vector("foo")
 
     val c2 = cli.parse(Seq("--name=curt", "foo"), Config())
-    c2.name should be === Some("curt")
-    c2.args should be === Vector("foo")
+    c2.name shouldBe Some("curt")
+    c2.args shouldBe Vector("foo")
     
-    val t1 = evaluating { cli.parse(Seq("--name"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("--name"), Config())
     t1.getMessage should startWith (ARGUMENT_MISSING)
   }
 
@@ -443,14 +442,14 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("-s", "hello", "foo", "-f", "/etc/passwd"), Config())
-    c1.args should be === Vector("foo")
-    c1.string should be === Some("hello")
-    c1.file should be === Some(new File("/etc/passwd"))
+    c1.args shouldBe Vector("foo")
+    c1.string shouldBe Some("hello")
+    c1.file shouldBe Some(new File("/etc/passwd"))
 
     val c2 = cli.parse(Seq("-f/etc/passwd"), Config())
-    c2.args should be === Vector.empty
-    c2.string should be === None
-    c2.file should be === Some(new File("/etc/passwd"))
+    c2.args shouldBe (Vector.empty)
+    c2.string shouldBe None
+    c2.file shouldBe Some(new File("/etc/passwd"))
   }
 
   // ====================================================================================
@@ -464,77 +463,77 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     
     // Single char
     val c1 = cli.parse(Seq("-c", "%"), Config())
-    c1.char should be === ('%')
+    c1.char shouldBe ('%')
 
     // Control characters
     val c2 = cli.parse(Seq("-c", "\\b"), Config())
-    c2.char should be === (8.toChar)
+    c2.char shouldBe (8.toChar)
 
     val c3 = cli.parse(Seq("-c", "\\t"), Config())
-    c3.char should be === (9.toChar)
+    c3.char shouldBe (9.toChar)
 
     val c4 = cli.parse(Seq("-c", "\\n"), Config())
-    c4.char should be === (10.toChar)
+    c4.char shouldBe (10.toChar)
 
     val c5 = cli.parse(Seq("-c", "\\f"), Config())
-    c5.char should be === (12.toChar)
+    c5.char shouldBe (12.toChar)
 
     val c6 = cli.parse(Seq("-c", "\\r"), Config())
-    c6.char should be === (13.toChar)
+    c6.char shouldBe (13.toChar)
 
     // Octal codes
     val c7 = cli.parse(Seq("-c", "\\033"), Config())
-    c7.char should be === (27.toChar)
+    c7.char shouldBe (27.toChar)
 
     val c8 = cli.parse(Seq("-c", "\\33"), Config())
-    c8.char should be === (27.toChar)
+    c8.char shouldBe (27.toChar)
 
     val c9 = cli.parse(Seq("-c", "\\377"), Config())
-    c9.char should be === (255.toChar)
+    c9.char shouldBe (255.toChar)
 
     // Hex codes
     val c10 = cli.parse(Seq("-c", "\\xA"), Config())
-    c10.char should be === ('\n')
+    c10.char shouldBe ('\n')
 
     val c11 = cli.parse(Seq("-c", "\\X0A"), Config())
-    c11.char should be === ('\n')
+    c11.char shouldBe ('\n')
 
     val c12 = cli.parse(Seq("-c", "é"), Config())
-    c12.char should be === ('é')
+    c12.char shouldBe ('é')
 
     val c13 = cli.parse(Seq("-c", "\\xe9"), Config())
-    c13.char should be === ('é')
+    c13.char shouldBe ('é')
 
     val c14 = cli.parse(Seq("-c", "\\u00e9"), Config())
-    c14.char should be === ('é')
+    c14.char shouldBe ('é')
 
     // Unicode
     val c15 = cli.parse(Seq("-c", "\\u001B"), Config())
-    c15.char should be === (27.toChar)
+    c15.char shouldBe (27.toChar)
 
     val c16 = cli.parse(Seq("-c", "\\u001b"), Config())
-    c16.char should be === (27.toChar)
+    c16.char shouldBe (27.toChar)
     
-    val t1 = evaluating { cli.parse(Seq("-c", "abc"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("-c", "abc"), Config())
     t1.getMessage should startWith (INVALID_ARGUMENT)
     
-    val t2 = evaluating { cli.parse(Seq("-c", "\\g"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("-c", "\\g"), Config())
     t2.getMessage should startWith (INVALID_ARGUMENT)
 
     // Octal must be 1 two or three digits
-    val t3 = evaluating { cli.parse(Seq("-c", "\\01777"), Config()) } should produce [OptionParserException]
+    val t3 = the [OptionParserException] thrownBy cli.parse(Seq("-c", "\\01777"), Config())
     t3.getMessage should startWith (INVALID_ARGUMENT)
 
     // Octal, if three digits first cannot be greater then 3
-    val t4 = evaluating { cli.parse(Seq("-c", "\\777"), Config()) } should produce [OptionParserException]
+    val t4 = the [OptionParserException] thrownBy cli.parse(Seq("-c", "\\777"), Config())
     t4.getMessage should startWith (INVALID_ARGUMENT)
 
     // Hex, cannot be more than 2 chars
-    val t5 = evaluating { cli.parse(Seq("-c", "\\x1FF"), Config()) } should produce [OptionParserException]
+    val t5 = the [OptionParserException] thrownBy cli.parse(Seq("-c", "\\x1FF"), Config())
     t5.getMessage should startWith (INVALID_ARGUMENT)
 
     // Unicode must be four hex digits
-    val t6 = evaluating { cli.parse(Seq("-c", "\\uFF"), Config()) } should produce [OptionParserException]
+    val t6 = the [OptionParserException] thrownBy cli.parse(Seq("-c", "\\uFF"), Config())
     t6.getMessage should startWith (INVALID_ARGUMENT)
   }
   
@@ -553,74 +552,74 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
 
     val c1 = cli.parse(Seq("-i", "2147483647", "-h", "32767", "-l", "9223372036854775807", "-f", "3.4028235E38", "-d", "1.7976931348623157E308"), Config())
-    c1.int    should be === (2147483647)
-    c1.short  should be === (32767.asInstanceOf[Short])
-    c1.long   should be === (9223372036854775807L)
-    c1.float  should be === (3.4028235E38.asInstanceOf[Float])
-    c1.double should be === (1.7976931348623157E308)
+    c1.int    shouldBe (2147483647)
+    c1.short  shouldBe (32767.asInstanceOf[Short])
+    c1.long   shouldBe (9223372036854775807L)
+    c1.float  shouldBe (3.4028235E38.asInstanceOf[Float])
+    c1.double shouldBe (1.7976931348623157E308)
 
     // Negatives
     val c2 = cli.parse(Seq("-i-2147483648", "-h-32768", "-l-9223372036854775808", "-f-3.4028235E38", "-d-1.7976931348623157E308"), Config())
-    c2.int    should be === (-2147483648)
-    c2.short  should be === ((-32768).asInstanceOf[Short])
-    c2.long   should be === (-9223372036854775808L)
-    c2.float  should be === (-3.4028235E38.asInstanceOf[Float])
-    c2.double should be === (-1.7976931348623157E308)
+    c2.int    shouldBe (-2147483648)
+    c2.short  shouldBe ((-32768).asInstanceOf[Short])
+    c2.long   shouldBe (-9223372036854775808L)
+    c2.float  shouldBe (-3.4028235E38.asInstanceOf[Float])
+    c2.double shouldBe (-1.7976931348623157E308)
     
     // Hex values
     val c3 = cli.parse(Seq("-i", "0xFFFF", "-h", "0XFFF", "-l", "0x12345FFFFF"), Config())
-    c3.int   should be === (0xFFFF)
-    c3.short should be === (0xFFF.asInstanceOf[Short])
-    c3.long  should be === (0x12345FFFFFL)
+    c3.int   shouldBe (0xFFFF)
+    c3.short shouldBe (0xFFF.asInstanceOf[Short])
+    c3.long  shouldBe (0x12345FFFFFL)
 
     // Negative Hex values
     val c4 = cli.parse(Seq("-i", "-0xFFFF", "-h", "-0XFFF", "-l", "-0x12345FFFFF"), Config())
-    c4.int   should be === (-0xFFFF)
-    c4.short should be === ((-0xFFF).asInstanceOf[Short])
-    c4.long  should be === (-0x12345FFFFFL)
+    c4.int   shouldBe (-0xFFFF)
+    c4.short shouldBe ((-0xFFF).asInstanceOf[Short])
+    c4.long  shouldBe (-0x12345FFFFFL)
 
     // Octal values
     val c5 = cli.parse(Seq("-i", "01777", "-h", "035", "-l", "024777444"), Config())
-    c5.int   should be === (1023)
-    c5.short should be === (29.asInstanceOf[Short])
-    c5.long  should be === (5504804L)
+    c5.int   shouldBe (1023)
+    c5.short shouldBe (29.asInstanceOf[Short])
+    c5.long  shouldBe (5504804L)
 
     // Negative Octal values
     val c6 = cli.parse(Seq("-i", "-01777", "-h", "-035", "-l", "-024777444"), Config())
-    c6.int   should be === (-1023)
-    c6.short should be === ((-29).asInstanceOf[Short])
-    c6.long  should be === (-5504804L)
+    c6.int   shouldBe (-1023)
+    c6.short shouldBe ((-29).asInstanceOf[Short])
+    c6.long  shouldBe (-5504804L)
 
     // Invalid values
     
-    val t1 = evaluating { cli.parse(Seq("-i", "3.14"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("-i", "3.14"), Config())
     t1.getMessage should startWith (INVALID_ARGUMENT)
-    val t2 = evaluating { cli.parse(Seq("-h", "abc"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("-h", "abc"), Config())
     t2.getMessage should startWith (INVALID_ARGUMENT)
-    val t3 = evaluating { cli.parse(Seq("-l", "abc"), Config()) } should produce [OptionParserException]
+    val t3 = the [OptionParserException] thrownBy cli.parse(Seq("-l", "abc"), Config())
     t3.getMessage should startWith (INVALID_ARGUMENT)
-    val t4 = evaluating { cli.parse(Seq("-f", "abc"), Config()) } should produce [OptionParserException]
+    val t4 = the [OptionParserException] thrownBy cli.parse(Seq("-f", "abc"), Config())
     t4.getMessage should startWith (INVALID_ARGUMENT)
-    val t5 = evaluating { cli.parse(Seq("-d", "abc"), Config()) } should produce [OptionParserException]
+    val t5 = the [OptionParserException] thrownBy cli.parse(Seq("-d", "abc"), Config())
     t5.getMessage should startWith (INVALID_ARGUMENT)
     
     // Values out of range
-    val t6 = evaluating { cli.parse(Seq("-i", "9223372036854775807"), Config()) } should produce [OptionParserException]
+    val t6 = the [OptionParserException] thrownBy cli.parse(Seq("-i", "9223372036854775807"), Config())
     t6.getMessage should startWith (INVALID_ARGUMENT)
-    val t7 = evaluating { cli.parse(Seq("-h", "9223372036854775807"), Config()) } should produce [OptionParserException]
+    val t7 = the [OptionParserException] thrownBy cli.parse(Seq("-h", "9223372036854775807"), Config())
     t7.getMessage should startWith (INVALID_ARGUMENT)
-    val t8 = evaluating { cli.parse(Seq("-l", "92233720368547758078"), Config()) } should produce [OptionParserException]
+    val t8 = the [OptionParserException] thrownBy cli.parse(Seq("-l", "92233720368547758078"), Config())
     t8.getMessage should startWith (INVALID_ARGUMENT)
-    val t9 = evaluating { cli.parse(Seq("-f", "1.7976931348623157E308"), Config()) } should produce [OptionParserException]
+    val t9 = the [OptionParserException] thrownBy cli.parse(Seq("-f", "1.7976931348623157E308"), Config())
     t9.getMessage should startWith (INVALID_ARGUMENT)
-    val t10 = evaluating { cli.parse(Seq("-d", "1.7976931348623157E309"), Config()) } should produce [OptionParserException]
+    val t10 = the [OptionParserException] thrownBy cli.parse(Seq("-d", "1.7976931348623157E309"), Config())
     t10.getMessage should startWith (INVALID_ARGUMENT)
 
-    val t11 = evaluating { cli.parse(Seq("-i", "0x1FFFFFFFF"), Config()) } should produce [OptionParserException]
+    val t11 = the [OptionParserException] thrownBy cli.parse(Seq("-i", "0x1FFFFFFFF"), Config())
     t11.getMessage should startWith (INVALID_ARGUMENT)
-    val t12 = evaluating { cli.parse(Seq("-h", "0x1FFFFFFFF"), Config()) } should produce [OptionParserException]
+    val t12 = the [OptionParserException] thrownBy cli.parse(Seq("-h", "0x1FFFFFFFF"), Config())
     t12.getMessage should startWith (INVALID_ARGUMENT)
-    val t13 = evaluating { cli.parse(Seq("-l", "0x1FFFFFFFFFFFFFFFF"), Config()) } should produce [OptionParserException]
+    val t13 = the [OptionParserException] thrownBy cli.parse(Seq("-l", "0x1FFFFFFFFFFFFFFFF"), Config())
     t13.getMessage should startWith (INVALID_ARGUMENT)
   }
   
@@ -634,12 +633,12 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("-i", "9", "foo", "--", "-i", "10"), Config())
-    c1.incr should be === (9)
-    c1.args should be === Vector("foo", "-i", "10")
+    c1.incr shouldBe (9)
+    c1.args shouldBe Vector("foo", "-i", "10")
     
     val c2 = cli.parse(Seq("--incr", "9", "foo", "--", "--incr", "10"), Config())
-    c2.incr should be === (9)
-    c2.args should be === Vector("foo", "--incr", "10")
+    c2.incr shouldBe (9)
+    c2.args shouldBe Vector("foo", "--incr", "10")
   }
   
   // ====================================================================================
@@ -652,24 +651,24 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("-"), Config())
-    c1.file should be === ("")
-    c1.args should be === Vector("-")
+    c1.file shouldBe ("")
+    c1.args shouldBe Vector("-")
     
     val c2 = cli.parse(Seq("-f", "-"), Config())
-    c2.file should be === ("-")
-    c2.args should be === Vector.empty
+    c2.file shouldBe ("-")
+    c2.args shouldBe (Vector.empty)
     
     val c3 = cli.parse(Seq("-f-"), Config())
-    c3.file should be === ("-")
-    c3.args should be === Vector.empty
+    c3.file shouldBe ("-")
+    c3.args shouldBe (Vector.empty)
 
     val c4 = cli.parse(Seq("--file", "-"), Config())
-    c4.file should be === ("-")
-    c4.args should be === Vector.empty
+    c4.file shouldBe ("-")
+    c4.args shouldBe (Vector.empty)
 
     val c5 = cli.parse(Seq("--file=-"), Config())
-    c5.file should be === ("-")
-    c5.args should be === Vector.empty
+    c5.file shouldBe ("-")
+    c5.args shouldBe (Vector.empty)
   }
   
   // ====================================================================================
@@ -683,47 +682,47 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("-d", "/etc", "foo"), Config())
-    c1.expert should be === (false)
-    c1.dir    should be === Some("/etc")
-    c1.args   should be === Vector("foo")
+    c1.expert shouldBe (false)
+    c1.dir    shouldBe Some("/etc")
+    c1.args   shouldBe Vector("foo")
 
     val c2 = cli.parse(Seq("-d/etc", "foo"), Config())
-    c2.expert should be === (false)
-    c2.dir    should be === Some("/etc")
-    c2.args   should be === Vector("foo")
+    c2.expert shouldBe (false)
+    c2.dir    shouldBe Some("/etc")
+    c2.args   shouldBe Vector("foo")
     
     val c3 = cli.parse(Seq("-xd", "/etc", "foo"), Config())
-    c3.expert should be === (true)
-    c3.dir    should be === Some("/etc")
-    c3.args   should be === Vector("foo")
+    c3.expert shouldBe (true)
+    c3.dir    shouldBe Some("/etc")
+    c3.args   shouldBe Vector("foo")
 
     val c4 = cli.parse(Seq("-xd/etc", "foo"), Config())
-    c4.expert should be === (true)
-    c4.dir    should be === Some("/etc")
-    c4.args   should be === Vector("foo")
+    c4.expert shouldBe (true)
+    c4.dir    shouldBe Some("/etc")
+    c4.args   shouldBe Vector("foo")
 
     // -- marks end of options (it would be eaten if the switch REQUIRED and argument!)
     val c5 = cli.parse(Seq("-xd", "--", "foo"), Config())
-    c5.expert should be === (true)
-    c5.dir    should be === Some("/tmp")  // <<--- Default value
-    c5.args   should be === Vector("foo")
+    c5.expert shouldBe (true)
+    c5.dir    shouldBe Some("/tmp")  // <<--- Default value
+    c5.args   shouldBe Vector("foo")
 
     // Optional args should not eat an arg that looks like a switch
     val c6 = cli.parse(Seq("-d", "-x", "foo"), Config())
-    c6.expert should be === (true)
-    c6.dir    should be === Some("/tmp")  // <<--- Default value
-    c6.args   should be === Vector("foo")
+    c6.expert shouldBe (true)
+    c6.dir    shouldBe Some("/tmp")  // <<--- Default value
+    c6.args   shouldBe Vector("foo")
 
     // Optional args should use '-' as an argument.
     val c7 = cli.parse(Seq("-d", "-", "foo"), Config())
-    c7.expert should be === (false)
-    c7.dir    should be === Some("-")
-    c7.args   should be === Vector("foo")
+    c7.expert shouldBe (false)
+    c7.dir    shouldBe Some("-")
+    c7.args   shouldBe Vector("foo")
 
     val c8 = cli.parse(Seq("-d"), Config())
-    c8.expert should be === (false)
-    c8.dir    should be === Some("/tmp")  // <<--- Default value
-    c8.args   should be === Vector.empty
+    c8.expert shouldBe (false)
+    c8.dir    shouldBe Some("/tmp")  // <<--- Default value
+    c8.args   shouldBe (Vector.empty)
   }
 
   // ====================================================================================
@@ -737,36 +736,36 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("--at", "1:30", "foo"), Config())
-    c1.expert should be === (false)
-    c1.at     should be === Some("1:30")
-    c1.args   should be === Vector("foo")
+    c1.expert shouldBe (false)
+    c1.at     shouldBe Some("1:30")
+    c1.args   shouldBe Vector("foo")
 
     val c2 = cli.parse(Seq("--at=1:30", "foo"), Config())
-    c2.expert should be === (false)
-    c2.at     should be === Some("1:30")
-    c2.args   should be === Vector("foo")
+    c2.expert shouldBe (false)
+    c2.at     shouldBe Some("1:30")
+    c2.args   shouldBe Vector("foo")
 
     // Optional args shouldn't eat an option name looking arg
     val c3 = cli.parse(Seq("--at", "-x", "foo"), Config())
-    c3.expert should be === (true)
-    c3.at     should be === Some("00:00")
-    c3.args   should be === Vector("foo")
+    c3.expert shouldBe (true)
+    c3.at     shouldBe Some("00:00")
+    c3.args   shouldBe Vector("foo")
         
     // Optional args should eat an option name looking arg if it is attached
     val c4 = cli.parse(Seq("--at=-x", "foo"), Config())
-    c4.expert should be === (false)
-    c4.at     should be === Some("-x")
-    c4.args   should be === Vector("foo")
+    c4.expert shouldBe (false)
+    c4.at     shouldBe Some("-x")
+    c4.args   shouldBe Vector("foo")
 
     val c5 = cli.parse(Seq("--at", "--", "foo"), Config())
-    c5.expert should be === (false)
-    c5.at     should be === Some("00:00")
-    c5.args   should be === Vector("foo")
+    c5.expert shouldBe (false)
+    c5.at     shouldBe Some("00:00")
+    c5.args   shouldBe Vector("foo")
 
     val c6 = cli.parse(Seq("--at"), Config())
-    c6.expert should be === (false)
-    c6.at     should be === Some("00:00")
-    c6.args   should be === Vector.empty
+    c6.expert shouldBe (false)
+    c6.at     shouldBe Some("00:00")
+    c6.args   shouldBe (Vector.empty)
   }
   
   // ====================================================================================
@@ -779,7 +778,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("--name="), Config())
-    c1.name should be === Some("")
+    c1.name shouldBe Some("")
   }
   
   // ====================================================================================
@@ -795,25 +794,25 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
     // Required argument
     val c1 = cli.parse(Seq("-g-x"), Config())
-    c1.expert should be === (false)
-    c1.gist   should be === Some("-x")
-    c1.jazz   should be === None
+    c1.expert shouldBe (false)
+    c1.gist   shouldBe Some("-x")
+    c1.jazz   shouldBe None
     
     val c2 = cli.parse(Seq("-g", "-x"), Config()) // Required args are greedy!
-    c2.expert should be === (false)
-    c2.gist   should be === Some("-x")
-    c2.jazz   should be === None
+    c2.expert shouldBe (false)
+    c2.gist   shouldBe Some("-x")
+    c2.jazz   shouldBe None
 
     // Optional argument
     val c3 = cli.parse(Seq("-j-x"), Config()) // Attached, so should use as arg.
-    c3.expert should be === (false)
-    c3.gist   should be === None
-    c3.jazz   should be === Some("-x")
+    c3.expert shouldBe (false)
+    c3.gist   shouldBe None
+    c3.jazz   shouldBe Some("-x")
 
     val c4 = cli.parse(Seq("-j", "-x"), Config()) // Optional arg, should not pick up the -x
-    c4.expert should be === (true)
-    c4.gist   should be === None
-    c4.jazz   should be === Some("bebop")
+    c4.expert shouldBe (true)
+    c4.gist   shouldBe None
+    c4.jazz   shouldBe Some("bebop")
   }
 
   // ====================================================================================
@@ -829,26 +828,26 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
 
     // Required argument
     val c1 = cli.parse(Seq("--gist=-x"), Config())
-    c1.expert should be === (false)
-    c1.gist   should be === Some("-x")
-    c1.jazz   should be === None
+    c1.expert shouldBe (false)
+    c1.gist   shouldBe Some("-x")
+    c1.jazz   shouldBe None
 
 
     val c2 = cli.parse(Seq("--gist", "-x"), Config()) // Required args are greedy!
-    c2.expert should be === (false)
-    c2.gist   should be === Some("-x")
-    c2.jazz   should be === None
+    c2.expert shouldBe (false)
+    c2.gist   shouldBe Some("-x")
+    c2.jazz   shouldBe None
 
     // Optional argument
     val c3 = cli.parse(Seq("--jazz=-x"), Config()) // Attached, so should use as arg.
-    c3.expert should be === (false)
-    c3.gist   should be === None
-    c3.jazz   should be === Some("-x")
+    c3.expert shouldBe (false)
+    c3.gist   shouldBe None
+    c3.jazz   shouldBe Some("-x")
 
     val c4 = cli.parse(Seq("--jazz", "-x"), Config()) // Optional arg, should not pick up the -x
-    c4.expert should be === (true)
-    c4.gist   should be === None
-    c4.jazz   should be === Some("bebop")
+    c4.expert shouldBe (true)
+    c4.gist   shouldBe None
+    c4.jazz   shouldBe Some("bebop")
   }
   
   // ====================================================================================
@@ -863,16 +862,16 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("--foo1", "46"), Config())
-    c1.foo1 should be === Some(Foo("46"))
-    c1.foo2 should be === None
+    c1.foo1 shouldBe Some(Foo("46"))
+    c1.foo2 shouldBe None
 
     val c2 = cli.parse(Seq("--foo2", "46"), Config())
-    c2.foo1 should be === None
-    c2.foo2 should be === Some(Foo("46"))
+    c2.foo1 shouldBe None
+    c2.foo2 shouldBe Some(Foo("46"))
 
     val c3 = cli.parse(Seq("--foo2"), Config())
-    c3.foo1 should be === None
-    c3.foo2 should be === Some(Foo("Default"))
+    c3.foo1 shouldBe None
+    c3.foo2 shouldBe Some(Foo("Default"))
   }
 
   // ====================================================================================
@@ -885,16 +884,16 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("-t", "binary"), Config())
-    c1.theType should be === Some("binary")
+    c1.theType shouldBe Some("binary")
 
     // Matching of argument prefix
     val c2 = cli.parse(Seq("--type", "as"), Config())
-    c2.theType should be === Some("ascii")
+    c2.theType shouldBe Some("ascii")
   
-    val t1 = evaluating { cli.parse(Seq("--type=a"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("--type=a"), Config())
     t1.getMessage should startWith (AMBIGUOUS_ARGUMENT)
     
-    val t2 = evaluating { cli.parse(Seq("--type=ebcdic"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("--type=ebcdic"), Config())
     t2.getMessage should startWith (INVALID_ARGUMENT)
   }
 
@@ -908,18 +907,18 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     }
 
     val c1 = cli.parse(Seq("-z"), Config())
-    c1.zone should be === (1)
+    c1.zone shouldBe (1)
 
-    val t1 = evaluating { cli.parse(Seq("-z", "four"), Config()) } should produce [OptionParserException]
+    val t1 = the [OptionParserException] thrownBy cli.parse(Seq("-z", "four"), Config())
     t1.getMessage should startWith (INVALID_ARGUMENT)
 
     val c2 = cli.parse(Seq("-z", "tw"), Config())
-    c2.zone should be === (2)
+    c2.zone shouldBe (2)
 
-    val t2 = evaluating { cli.parse(Seq("-ztx"), Config()) } should produce [OptionParserException]
+    val t2 = the [OptionParserException] thrownBy cli.parse(Seq("-ztx"), Config())
     t2.getMessage should startWith (INVALID_ARGUMENT)
   
-    val t3 = evaluating { cli.parse(Seq("--zone", "t"), Config()) } should produce [OptionParserException]
+    val t3 = the [OptionParserException] thrownBy cli.parse(Seq("--zone", "t"), Config())
     t3.getMessage should startWith (AMBIGUOUS_ARGUMENT)
   }
   
@@ -930,7 +929,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
   "Help Info" should "include a -h, --help option by default" in {
     case class Config()
     val cli = new OptionParser[Config]
-    cli.help should be === ("    -h, --help                       Show this message")
+    cli.help shouldBe ("    -h, --help                       Show this message")
   }    
   
   // ====================================================================================
@@ -939,7 +938,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
     case class Config()
     val cli = new OptionParser[Config]
     cli.auto_help = false
-    cli.help should be === ("")
+    cli.help shouldBe ("")
   }
   
   // ====================================================================================
@@ -959,7 +958,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       flag("-i", "--iiiiiii", "Line 1 for iiiiiii", "Line 2 for iiiiiii")(identity)
     }
 
-    cli.help should be === (
+    cli.help shouldBe (
     """    -a
       |    -b                               Help for b
       |    -c                               Line 1 for c
@@ -992,7 +991,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       bool("-i", "--iiiiiii", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { (_, c) => c }
     }
 
-    cli.help should be === (
+    cli.help shouldBe (
     """    -a
       |    -b                               Help for b
       |    -c                               Line 1 for c
@@ -1025,7 +1024,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       reqd[Int]("-i", "--iiiiiii=VALUE", "Line 1 for iiiiiii", "Line 2 for iiiiiii") { (_, c) => c }
     }
   
-    cli.help should be === (
+    cli.help shouldBe (
     """    -a ARG
       |    -b VAL                           Help for b
       |    -c VALUE                         Line 1 for c
@@ -1061,7 +1060,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       optl[Int]("-l", "--lllllll[=VALUE]", "Line 1 for lllllll", "Line 2 for lllllll") { (_, c) => c }
     }
   
-    cli.help should be === (
+    cli.help shouldBe (
     """    -a [ARG]
       |    -b [VAL]                         Help for b
       |    -c [VALUE]                       Line 1 for c
@@ -1091,7 +1090,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       optl[Int]("-b [ARG]", "--box [VALUE]") { (_, c) => c }
     }
     
-    cli.help should be === (
+    cli.help shouldBe (
     """    -a, --apple VALUE
       |    -b, --box [VALUE]""".stripMargin('|')
     )
@@ -1117,7 +1116,7 @@ class OptionParserSpec extends FlatSpec with ShouldMatchers {
       reqd[String]("", "--goo=ARG", "Goo help") { (_, c) => c }
     }
     
-    cli.help should be === (
+    cli.help shouldBe (
     """testapp [options]
       |
       |    -a, --apple

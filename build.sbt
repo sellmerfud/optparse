@@ -4,13 +4,13 @@ description := "A simple but powerful Scala command line parser."
 
 organization := "org.sellmerfud"
 
-version := "2.0"
+version := "2.1"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.11.1"
 
 scalacOptions ++= Seq( "-deprecation", "-unchecked", "-feature" )
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.0" % "test"
 
 publishMavenStyle := true
 
