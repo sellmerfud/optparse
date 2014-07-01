@@ -6,10 +6,15 @@ By using closures when defining command line switches your code becomes much eas
 
 ## Maven Information ##
     groupId:     org.sellmerfud
+    artifactId:  optparse_2.11
+    version:     2.1
+    -- or --
     artifactId:  optparse_2.10, optparse_2.9.2
     version:     2.0
     
 ## Sbt Configuration ##
+    libraryDependencies += "org.sellmerfud" % "optparse_2.11" % "2.1"
+    -- or --
     libraryDependencies += "org.sellmerfud" % "optparse_2.10" % "2.0"
     -- or --
     libraryDependencies += "org.sellmerfud" % "optparse_2.9.2" % "2.0"
