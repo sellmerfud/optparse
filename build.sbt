@@ -6,11 +6,11 @@ organization := "org.sellmerfud"
 
 version := "2.1"
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.12.0"
 
 scalacOptions ++= Seq( "-deprecation", "-unchecked", "-feature" )
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.0" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 
 publishMavenStyle := true
 
