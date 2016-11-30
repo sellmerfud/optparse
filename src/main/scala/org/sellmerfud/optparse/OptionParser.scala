@@ -274,7 +274,7 @@ import scala.reflect.ClassTag
  * object Sample {
  *   val dateFormat = new SimpleDateFormat("MM-dd-yyyy")
  * 
- *   def main(args: Array[String]) {
+ *   def main(args: Array[String]): Unit = {
  *     case class Config(
  *       quiet:    Boolean        = false,
  *       expert:   Boolean        = false,
@@ -433,7 +433,7 @@ class OptionParser[C] {
   /**
    * Parse the given command line. 
    * Each token from the command line should be in a separate entry in the given sequence such
-   * as the array of strings passed to `def main(args: Array[String]) {}`.
+   * as the array of strings passed to `def main(args: Array[String]): Unit = {}`.
    * The option switches are processed using the previously defined switches.  All non-switch
    * arguments are returned as a list of strings. 
    *
