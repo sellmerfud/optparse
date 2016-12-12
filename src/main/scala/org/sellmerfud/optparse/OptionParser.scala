@@ -401,11 +401,11 @@ class OptionParser[C] {
     addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
   /**  Define a switch that takes a required argument where the valid values are given by a Seq[]. */
-  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: (T, C) => C)(implicit m: ClassTag[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: (T, C) => C): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes a required argument where the valid values are given by a Map. */
-  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (T, C) => C)(implicit m: ClassTag[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (T, C) => C): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes an optional argument. */
@@ -413,11 +413,11 @@ class OptionParser[C] {
     addSwitch(new OptArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   /** Define a switch that takes an optional argument where the valid values are given by a Seq[]. */
-  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: (Option[T], C) => C)(implicit m: ClassTag[T]): Unit =
+  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: (Option[T], C) => C): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes an optional argument where the valid values are given by a Map. */
-  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (Option[T], C) => C)(implicit m: ClassTag[T]): Unit =
+  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (Option[T], C) => C): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes a comma separated list of arguments. */
