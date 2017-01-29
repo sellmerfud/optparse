@@ -712,7 +712,7 @@ class OptionParser[C] {
   }
   
   private val ShortSpec   = """-(\S)(?:\s+(.+))?""".r
-  private val LongSpec    = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?""".r
+  private val LongSpec    = """--([^\s\[=]+)(?:(=|\[=|\s+)(\S.*))?""".r
   private val LongNegated = """--no-.*""".r
   // Parse the switch names and return the 'fixed' names.
   // Short name: 
@@ -747,19 +747,22 @@ class OptionParser[C] {
       case "" =>
       case LongNegated() => throw new OptionParserException("Invalid long name specification: " + longSpec.trim + "  (The prefix '--no-' is reserved for boolean options)")
       case LongSpec(n, _, a) if a == null => long = n
-      case LongSpec(n, d, a) => long = n; l_delim = d.substring(0, 1); arg = a
+      case LongSpec(n, d, a) => 
+        long = n
+        l_delim = if (d.startsWith(" ")) d take 1 else d
+        arg = a
       case x => throw new OptionParserException("Invalid long name specification: " + x)
     }
     
-    val ldisp = if (forBool) "[no-]" + long else long
-    val display = (short, long, arg) match {
+    val ldisp = if (long == "" ) "" else if (forBool) "[no-]" + long else long
+    val display = (short, ldisp, arg) match {
       case ("", "",  _) => throw new OptionParserException("Both long and short name specifications cannot be blank")
       case (s,  "", "") => "-%s".format(s)
-      case ("",  l, "") => "    --%s".format(ldisp)
+      case ("",  l, "") => "    --%s".format(l)
       case (s,  "",  a) => "-%s %s".format(s, a)
-      case (s,   l, "") => "-%s, --%s".format(s, ldisp)
-      case ("",  l,  a) => "    --%s%s%s".format(ldisp, l_delim, a)
-      case (s,   l,  a) => "-%s, --%s%s%s".format(s, ldisp, l_delim, a)
+      case (s,   l, "") => "-%s, --%s".format(s, l)
+      case ("",  l,  a) => "    --%s%s%s".format(l, l_delim, a)
+      case (s,   l,  a) => "-%s, --%s%s%s".format(s, l, l_delim, a)
     }
     Names(short, long, display)
   }
