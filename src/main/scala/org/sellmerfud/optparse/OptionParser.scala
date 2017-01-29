@@ -598,7 +598,7 @@ class OptionParser[C] {
   
   
   // The short and long names are stored without leading '-' or '--'
-  private abstract class Switch(val names: Names, val info: Seq[String] = List()) extends Token {
+  private abstract class Switch(val names: Names, val info: Seq[String] = List()) {
     val takesArg: Boolean = false
     val requiresArg: Boolean = false
     def exactMatch(lname: String) = lname == names.long
