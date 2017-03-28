@@ -568,11 +568,11 @@ class OptionParser[C] {
   private class ArgumentMissing(arg_display: String) extends OptionParserException("argument missing: " + arg_display)
   private class InvalidArgument(m: String, arg_display: String) extends OptionParserException("invalid argument: " + arg_display + m) {
     def this(e: InvalidArgumentException, arg_display: String) = 
-      this(if (e.getMessage.isEmpty) "" else "   (%s)".format(e.getMessage), arg_display)
+      this(e.getMessage, arg_display)
   }
   private class AmbiguousArgument(m: String, arg_display: String) extends OptionParserException("ambiguous argument: " + arg_display + m) {
     def this(e: AmbiguousArgumentException, arg_display: String) = 
-      this(if (e.getMessage.isEmpty) "" else "   (%s)".format(e.getMessage), arg_display)
+      this(e.getMessage, arg_display)
   }
   private class NeedlessArgument(arg_display: String) extends OptionParserException("needless argument: " + arg_display)
   private class InvalidOption(arg_display: String) extends OptionParserException("invalid option: " + arg_display)
