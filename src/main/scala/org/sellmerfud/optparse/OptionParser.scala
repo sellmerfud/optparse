@@ -274,7 +274,7 @@ import scala.reflect.ClassTag
  * object Sample {
  *   val dateFormat = new SimpleDateFormat("MM-dd-yyyy")
  * 
- *   def main(args: Array[String]) {
+ *   def main(args: Array[String]): Unit = {
  *     case class Config(
  *       quiet:    Boolean        = false,
  *       expert:   Boolean        = false,
@@ -401,11 +401,11 @@ class OptionParser[C] {
     addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
   
   /**  Define a switch that takes a required argument where the valid values are given by a Seq[]. */
-  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: (T, C) => C)(implicit m: ClassTag[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Seq[T], info: String*)(func: (T, C) => C): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes a required argument where the valid values are given by a Map. */
-  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (T, C) => C)(implicit m: ClassTag[T]): Unit =
+  def reqd[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (T, C) => C): Unit =
     addSwitch(new ArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
 
   /** Define a switch that takes an optional argument. */
@@ -413,11 +413,11 @@ class OptionParser[C] {
     addSwitch(new OptArgSwitch(getNames(short, long), info, arg_parser(m), func))
 
   /** Define a switch that takes an optional argument where the valid values are given by a Seq[]. */
-  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: (Option[T], C) => C)(implicit m: ClassTag[T]): Unit =
+  def optl[T](short: String, long: String, vals: Seq[T], info: String*)(func: (Option[T], C) => C): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes an optional argument where the valid values are given by a Map. */
-  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (Option[T], C) => C)(implicit m: ClassTag[T]): Unit =
+  def optl[T](short: String, long: String, vals: Map[String, T], info: String*)(func: (Option[T], C) => C): Unit =
     addSwitch(new OptArgSwitchWithVals(getNames(short, long), info, new ValueList(vals), func))
   
   /** Define a switch that takes a comma separated list of arguments. */
@@ -433,7 +433,7 @@ class OptionParser[C] {
   /**
    * Parse the given command line. 
    * Each token from the command line should be in a separate entry in the given sequence such
-   * as the array of strings passed to `def main(args: Array[String]) {}`.
+   * as the array of strings passed to `def main(args: Array[String]): Unit = {}`.
    * The option switches are processed using the previously defined switches.  All non-switch
    * arguments are returned as a list of strings. 
    *
@@ -598,7 +598,7 @@ class OptionParser[C] {
   
   
   // The short and long names are stored without leading '-' or '--'
-  private abstract class Switch(val names: Names, val info: Seq[String] = List()) extends Token {
+  private abstract class Switch(val names: Names, val info: Seq[String] = List()) {
     val takesArg: Boolean = false
     val requiresArg: Boolean = false
     def exactMatch(lname: String) = lname == names.long
@@ -712,7 +712,7 @@ class OptionParser[C] {
   }
   
   private val ShortSpec   = """-(\S)(?:\s+(.+))?""".r
-  private val LongSpec    = """--([^\s=]+)(?:(=|\[=|\s+)(\S.*))?""".r
+  private val LongSpec    = """--([^\s\[=]+)(?:(=|\[=|\s+)(\S.*))?""".r
   private val LongNegated = """--no-.*""".r
   // Parse the switch names and return the 'fixed' names.
   // Short name: 
@@ -747,19 +747,22 @@ class OptionParser[C] {
       case "" =>
       case LongNegated() => throw new OptionParserException("Invalid long name specification: " + longSpec.trim + "  (The prefix '--no-' is reserved for boolean options)")
       case LongSpec(n, _, a) if a == null => long = n
-      case LongSpec(n, d, a) => long = n; l_delim = d.substring(0, 1); arg = a
+      case LongSpec(n, d, a) => 
+        long = n
+        l_delim = if (d.startsWith(" ")) d take 1 else d
+        arg = a
       case x => throw new OptionParserException("Invalid long name specification: " + x)
     }
     
-    val ldisp = if (forBool) "[no-]" + long else long
-    val display = (short, long, arg) match {
+    val ldisp = if (long == "" ) "" else if (forBool) "[no-]" + long else long
+    val display = (short, ldisp, arg) match {
       case ("", "",  _) => throw new OptionParserException("Both long and short name specifications cannot be blank")
       case (s,  "", "") => "-%s".format(s)
-      case ("",  l, "") => "    --%s".format(ldisp)
+      case ("",  l, "") => "    --%s".format(l)
       case (s,  "",  a) => "-%s %s".format(s, a)
-      case (s,   l, "") => "-%s, --%s".format(s, ldisp)
-      case ("",  l,  a) => "    --%s%s%s".format(ldisp, l_delim, a)
-      case (s,   l,  a) => "-%s, --%s%s%s".format(s, ldisp, l_delim, a)
+      case (s,   l, "") => "-%s, --%s".format(s, l)
+      case ("",  l,  a) => "    --%s%s%s".format(l, l_delim, a)
+      case (s,   l,  a) => "-%s, --%s%s%s".format(s, l, l_delim, a)
     }
     Names(short, long, display)
   }

@@ -292,7 +292,7 @@ object Sample {
     libs:     List[File]     = Nil,
     fileArgs: Vector[String] = Vector.empty)
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val config = try {
       new OptionParser[Config] {
         // Add an argument parser to handle date values

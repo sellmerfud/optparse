@@ -2,7 +2,7 @@
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
   version      := "2.2",
-  scalaVersion := "2.11.1"
+  scalaVersion := "2.12.3"
 )
 
 lazy val optparse = (project in file("."))
@@ -11,7 +11,8 @@ lazy val optparse = (project in file("."))
     name        := "optparse",
     description := "A simple but powerful Scala command line parser.",
     scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.0" % "test",
+    libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.1",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test",
     
     publishMavenStyle := true,
     publishArtifact in Test := false,
@@ -46,6 +47,5 @@ lazy val optparse = (project in file("."))
       </developers>
     )
 )
-
 
 
