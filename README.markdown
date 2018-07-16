@@ -13,13 +13,18 @@ By using closures when defining command line switches your code becomes much eas
     version:     2.0
     
 ## Sbt Configuration ##
+
+###### For Scala verion 2.12:
+    libraryDependencies += "org.sellmerfud" % "optparse_2.12" % "2.2"
+###### For Scala verion 2.11:
     libraryDependencies += "org.sellmerfud" % "optparse_2.11" % "2.2"
-    -- or --
+###### For Scala verion 2.10:
     libraryDependencies += "org.sellmerfud" % "optparse_2.10" % "2.0"
-    -- or --
+###### For Scala verion 2.9.2:
     libraryDependencies += "org.sellmerfud" % "optparse_2.9.2" % "2.0"
 
-    // And if Sonatype isn't in your list of resolvers, for some reason:
+And if Sonatype isn't in your list of resolvers, for some reason, add this line:
+
     resolvers += "Sonatype Nexus releases" at "https://oss.sonatype.org/content/repositories/releases"
 
     
