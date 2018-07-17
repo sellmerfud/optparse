@@ -14,13 +14,11 @@ By using closures when defining command line switches your code becomes much eas
     
 ## Sbt Configuration ##
 
-###### For Scala verion 2.12:
-    libraryDependencies += "org.sellmerfud" % "optparse_2.12" % "2.2"
-###### For Scala verion 2.11:
-    libraryDependencies += "org.sellmerfud" % "optparse_2.11" % "2.2"
-###### For Scala verion 2.10:
-    libraryDependencies += "org.sellmerfud" % "optparse_2.10" % "2.0"
-###### For Scala verion 2.9.2:
+###### For Scala versions 2.11 and 2.12:
+    libraryDependencies += "org.sellmerfud" %% "optparse" % "2.2"
+###### For Scala version 2.10:
+    libraryDependencies += "org.sellmerfud" %% "optparse" % "2.0"
+###### For Scala version 2.9.2:
     libraryDependencies += "org.sellmerfud" % "optparse_2.9.2" % "2.0"
 
 And if Sonatype isn't in your list of resolvers, for some reason, add this line:
