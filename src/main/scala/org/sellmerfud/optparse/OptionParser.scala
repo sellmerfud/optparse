@@ -877,18 +877,18 @@ class OptionParser[C] {
 /** Base class of all exceptions thrown by [[org.sellmerfud.optparse.OptionParser]].  
  *
  * You should catch this when calling `OptionParser#parse()`. */
-class OptionParserException(m: String) extends RuntimeException(m)
+class OptionParserException(m: String = "") extends RuntimeException(m)
 
 /**
  * An instance of this exception should be thrown by argument parsers upon detecting
  * an invalid argument value.
  *
  * See the `addArgumentParser` method of [[org.sellmerfud.optparse.OptionParser]]. */
-class InvalidArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
+class InvalidArgumentException(m: String = "") extends OptionParserException(m)
 
 /**
  * An instance of this exception should be thrown by argument parsers upon detecting
  * an ambiguous argument value.
  *
  * See the `addArgumentParser` method of [[org.sellmerfud.optparse.OptionParser]]. */
-class AmbiguousArgumentException(m: String) extends OptionParserException(m) { def this() = this("") }
+class AmbiguousArgumentException(m: String = "") extends OptionParserException(m)
