@@ -481,11 +481,11 @@ class OptionParser[C] {
       SwitchToken(switch, false, arg, false)
     }
 
-    val TerminationToken   = "--".r
-    val StdinToken         = "(-)".r
-    val LongSwitchWithArg  = "--([^=]+)=(.*)".r
-    val LongSwitch         = "--(.*)".r
-    val ShortSwitch        = "-(.)(.+)?".r
+    val TerminationToken   = """--""".r
+    val StdinToken         = """(-)""".r
+    val LongSwitchWithArg  = """--([^=]+)=(.*)""".r
+    val LongSwitch         = """--(.*)""".r
+    val ShortSwitch        = """-(.)(.+)?""".r
   
     // Get the next token from the argv buffer.
       def nextToken: Token = {
@@ -848,7 +848,7 @@ class OptionParser[C] {
   // \ u N N N N  where NNNN are four hex digits defining a UNICODE character code.
   //
   // Note that when passing these from most shells you will have to escape the backslash!
-  private val SINGLE  = "(.)".r
+  private val SINGLE  = """(.)""".r
   private val OCTAL   = """\\([0-3][0-7]{2}|[0-7]{1,2})""".r
   private val HEX     = """\\[xX]([0-9a-fA-F]{1,2})""".r
   private val UNICODE = """\\u([0-9a-fA-F]{4})""".r
