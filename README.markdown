@@ -1,4 +1,4 @@
-## Overview##
+## Overview ##
 OptionParser is a class that handles the parsing of switches and arguments on the command line.
 It is based on the Ruby OptionParser class that is part of the standard Ruby library. It supports
 POSIX style short option switches as well as GNU style long option switches.
@@ -33,7 +33,7 @@ is built against Scala 2.10 and is not compatible with earlier versions of Scala
 If you are using a Scala version prior to 2.9.2, then use the 1.0 version of this library.
 
 [README 1.0]: https://github.com/sellmerfud/optparse/blob/master/README-1.0.markdown
-    
+
 ## Features ##
 * The switch specification and the code to handle it are written in the same place.
 * Automatically formats a help summary.
