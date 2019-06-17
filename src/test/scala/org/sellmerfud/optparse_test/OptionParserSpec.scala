@@ -135,13 +135,13 @@ class OptionParserSpec extends FlatSpec with Matchers {
     config.notUsed  shouldBe (false)
     config.notUsed2 shouldBe (false)
     config.expert   shouldBe (true)
-    config.args     shouldBe ('empty)
+    config.args     should be (empty)
 
     val config2 = cli.parse(Seq("--expert"), Config())
     config2.notUsed  shouldBe (false)
     config2.notUsed2 shouldBe (false)
     config2.expert   shouldBe (true)
-    config2.args     shouldBe ('empty)
+    config2.args     should be (empty)
   }
   
   // ====================================================================================
@@ -167,9 +167,9 @@ class OptionParserSpec extends FlatSpec with Matchers {
     }
     
     val config = cli.parse(Seq(), Config())
-    config.args   shouldBe ('empty)
-    config.name   shouldBe (None)
-    config.expert shouldBe (false)
+    config.args   should be (empty)
+    config.name   should be (None)
+    config.expert should be (false)
   }    
 
   // ====================================================================================
