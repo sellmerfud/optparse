@@ -78,7 +78,7 @@ val config = cli.parse(List("-r", "9"), Config())
 ```
 The `reqd()` function defines a switch that takes a required argument.  In this case we have
 specified that we expect the argument value to be an `Int`.  If the user enters a value that
-is not a valid integer then an [[org.sellmerfud.optparse.OptionParserException]] is thrown with an appropriate error 
+is not a valid integer then an `org.sellmerfud.optparse.OptionParserException` is thrown with an appropriate error 
 message.  If the value is valid then our supplied function is called with the integer value.
 Here we return a copy of our configuration class with the `revision` field updated. 
 
@@ -318,7 +318,7 @@ object Sample {
         flag("-x", "", "Use expert mode")
           { (c) => c.copy(expert = true) }
 
-        reqd[String]("-n <name>", "", "Enter you name.")
+        reqd[String]("-n <name>", "", "Enter your name.")
           { (v, c) => c.copy(name = Some(v)) }
 
         reqd[File]("-l", "--lib=<lib>", "Specify a library. Can be used mutiple times.")
