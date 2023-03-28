@@ -359,7 +359,7 @@ class OptionParser[C] {
   
   private val switches = new ListBuffer[Switch]
   private var argHandler: Option[ArgHandler[_]] = None
-  
+    
   /** Returns the formatted help text as a String */
   def help: String = {
     add_auto_help()
@@ -396,6 +396,10 @@ class OptionParser[C] {
   def bool(short: String, long: String, info: String*)(func: (Boolean, C) => C): Unit =
     addSwitch(new BoolSwitch(getNames(short, long, true), info, func))
 
+    /** Define an int switch if the form -23 */
+  def int(display: String, info: String*)(func: (Int, C) => C): Unit =
+    addSwitch(new IntSwitch(display, info, func))
+    
   /** Define a switch that takes a required argument. */
   def reqd[T](short: String, long: String, info: String*)(func: (T, C) => C)(implicit m: ClassTag[T]): Unit =
     addSwitch(new ArgSwitch(getNames(short, long), info, arg_parser(m), func))
@@ -443,6 +447,7 @@ class OptionParser[C] {
     var _config       = config
     val argv          = new ListBuffer[String] ++ args
     var arg_display   = ""  // Used for error reporting
+    val haveIntSwitch = switches exists (_.names.short == INT_SWITCH)
     
     // Pluck a switch argument from argv. If greedy we always take it.
     // If not we take it if it does not begin with a dash.
@@ -480,11 +485,18 @@ class OptionParser[C] {
       val switch = switches.find(_.names.short == name).getOrElse { throw new InvalidOption(arg_display) }
       SwitchToken(switch, false, arg, false)
     }
+    
+    // For an int switch the name is the value.
+    def intSwitch(name: String, tail: Option[String]): IntSwitchToken = {
+      val switch = switches.find(_.names.short == INT_SWITCH).getOrElse { throw new InvalidOption(arg_display) }
+      IntSwitchToken(switch, name, tail)
+    }
 
     val TerminationToken   = """--""".r
     val StdinToken         = """(-)""".r
     val LongSwitchWithArg  = """--([^=]+)=(.*)""".r
     val LongSwitch         = """--(.*)""".r
+    val IntegerSwitch      = """-(\d+)(.+)?""".r
     val ShortSwitch        = """-(.)(.+)?""".r
   
     // Get the next token from the argv buffer.
@@ -495,13 +507,14 @@ class OptionParser[C] {
         arg_display = argv(0)
         argv.remove(0) match {
           // The order of the cases here is important!
-          case TerminationToken()           => Terminate()
-          case StdinToken(arg)              => NonSwitch(arg)
-          case LongSwitchWithArg(name, arg) => longSwitch(name, Some(arg))
-          case LongSwitch(name)             => longSwitch(name, None)
-          case ShortSwitch(name, null)      => shortSwitch(name, None)
-          case ShortSwitch(name, arg)       => shortSwitch(name, Some(arg)) 
-          case arg                          => NonSwitch(arg)
+          case TerminationToken()                         => Terminate()
+          case StdinToken(arg)                            => NonSwitch(arg)
+          case LongSwitchWithArg(name, arg)               => longSwitch(name,  Some(arg))
+          case LongSwitch(name)                           => longSwitch(name, None)
+          case IntegerSwitch(name, tail) if haveIntSwitch => intSwitch(name,   Option(tail))
+          case ShortSwitch(name, null)                    => shortSwitch(name, None)
+          case ShortSwitch(name, arg)                     => shortSwitch(name, Some(arg))
+          case arg                                        => NonSwitch(arg)
         }
       }
     }
@@ -511,14 +524,22 @@ class OptionParser[C] {
         case Terminate() =>
           // Process any remaining non-switch arguments (after --)
           for (h <- argHandler; arg <- argv) _config = coercingExceptions(arg)(h.process(arg, _config))
+          
         case NonSwitch(arg) => 
           for (h <- argHandler) _config = coercingExceptions(arg)(h.process(arg, _config))
           processTokens
+          
+        case IntSwitchToken(switch, value, tail) =>
+          //  Put the tail back on the argv list
+          tail foreach (t => s"-$t" +=: argv)
+          _config = coercingExceptions(arg_display)(switch.process(Some(value), false, _config))
+          processTokens
+        
         case SwitchToken(switch, longForm, joinedArg, negated) =>
           var arg = (joinedArg, switch.takesArg, longForm) match {
             case (Some(a), true,  _)     => Some(a)
             case (Some(a), false, true)  => throw new NeedlessArgument(arg_display)
-            case (Some(a), false, false) => ("-" + a) +=: argv; None  // short switches can be joined so put the arg back with a - prefix                
+            case (Some(a), false, false) => s"-$a" +=: argv; None  // short switches can be joined so put the arg back with a - prefix                
             case (None,    false, _)     => None
             case (None,    true,  _)     => pluckArg(switch.requiresArg)
           }
@@ -578,7 +599,7 @@ class OptionParser[C] {
   private class InvalidOption(arg_display: String) extends OptionParserException("invalid option: " + arg_display)
   private class AmbiguousOption(m: String, arg_display: String) extends OptionParserException("ambiguous option: " + arg_display + m)
   
-  private abstract class Token
+  private sealed trait Token
   
   private case class Terminate() extends Token
 
@@ -596,6 +617,9 @@ class OptionParser[C] {
   //   -tbinary  or  --type=binary 
   private case class SwitchToken(switch: Switch, longForm: Boolean, joinedArg: Option[String], negated: Boolean) extends Token
   
+  //  The tail will exist if the int switch is followed by other short switches
+  //  Ex:  -10xy  would be equivalent to -10 -x -y
+  private case class IntSwitchToken(switch: Switch, value: String, tail: Option[String]) extends Token
   
   // The short and long names are stored without leading '-' or '--'
   private abstract class Switch(val names: Names, val info: Seq[String] = List()) {
@@ -622,7 +646,7 @@ class OptionParser[C] {
     override def process(arg: Option[String], negated: Boolean, config: C): C = config
     override lazy val toString = text
   }
-  
+    
   private class NoArgSwitch(n: Names, d: Seq[String], func: (C) => C) extends Switch(n, d) {
     override def process(arg: Option[String], negated: Boolean, config: C): C = func(config)
   }
@@ -635,6 +659,19 @@ class OptionParser[C] {
     override def negatedMatch(lname: String) = names.longNegated.startsWith(lname)
     
     override def process(arg: Option[String], negated: Boolean, config: C): C = func(!negated, config)
+  }
+  
+  val INT_SWITCH = "-INT-SWITCH-"
+  //  An IntSwitch is a switch where a single dash is followed by a integer
+  //  such as -1, -10, -35, etc.
+  //  This switch does not take an argument and does not have a long form.
+  //  Any switches with a short name that consists of a digit will be superceeded by this
+  //  switch and vice versa.
+  //  It has a *special* short name of "--INT-SWITCH--"
+  private class IntSwitch(display: String, d: Seq[String], func: (Int, C) => C) extends Switch(Names(INT_SWITCH, "", display), d) {
+    override def process(arg: Option[String], negated: Boolean, config: C): C =  {
+      func(arg.get.toInt, config)
+    }
   }
   
   private class ArgSwitch[T](n: Names, d: Seq[String], parse_arg: (String) => T, func: (T, C) => C) extends Switch(n, d) {
@@ -704,8 +741,16 @@ class OptionParser[C] {
   // as the new switch then it is first removed.  Thus a new switch can potentially replace
   // two existing switches.
   private def addSwitch(switch: Switch): Unit = {
+    val SingleDigit = """^\d$""".r
+    def isSingleDigit(name: String) = SingleDigit.findFirstIn(name).nonEmpty
     def remove(p: Switch => Boolean): Unit = switches find(p) foreach (switches -= _)
     
+    //  INT_SWITCH removes all switches with short name that is single digit
+    //  and vise versa
+    if (switch.names.short == INT_SWITCH)
+      remove(s => isSingleDigit(s.names.short))
+    else if (isSingleDigit(switch.names.short))
+      remove(_.names.short == INT_SWITCH)
     if (switch.names.short != "") remove(_.names.short == switch.names.short)
     if (switch.names.long  != "") remove(_.names.long  == switch.names.long)
     switches += switch

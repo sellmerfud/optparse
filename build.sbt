@@ -4,7 +4,7 @@ import xerial.sbt.Sonatype._
 lazy val optparse = (project in file("."))
   .settings(
     name         := "optparse",
-    version      := "2.2",
+    version      := "2.3-SNAPSHOT",
     organization := "org.sellmerfud",
     scalaVersion := "2.13.0",
     description  := "A simple but powerful Scala command line parser.",
