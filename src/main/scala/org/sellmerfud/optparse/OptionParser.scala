@@ -628,6 +628,7 @@ class OptionParser[C] {
     def exactMatch(lname: String) = lname == names.long
     def partialMatch(lname: String) = names.long.startsWith(lname)
     def negatedMatch(lname: String) = false
+    def canNegate = false
     
     // Called when this switch is detected on the command line.  Should handle the
     // invocation of the user's code to process this switch.
@@ -657,7 +658,7 @@ class OptionParser[C] {
     override def partialMatch(lname: String) = names.long.startsWith(lname) || names.longNegated.startsWith(lname)
     // Return true if the given lname is a prefix match for our negated name.
     override def negatedMatch(lname: String) = names.longNegated.startsWith(lname)
-    
+    override def canNegate = true
     override def process(arg: Option[String], negated: Boolean, config: C): C = func(!negated, config)
   }
   
@@ -752,7 +753,13 @@ class OptionParser[C] {
     else if (isSingleDigit(switch.names.short))
       remove(_.names.short == INT_SWITCH)
     if (switch.names.short != "") remove(_.names.short == switch.names.short)
-    if (switch.names.long  != "") remove(_.names.long  == switch.names.long)
+    if (switch.names.long  != "") {
+      remove(_.names.long  == switch.names.long)
+      if (switch.canNegate)
+        remove(sw => !sw.canNegate && sw.names.long  == switch.names.longNegated)
+      else
+        remove(sw => sw.canNegate && sw.names.longNegated  == switch.names.long)
+    }
     switches += switch
   }
   
@@ -790,7 +797,7 @@ class OptionParser[C] {
 
     longSpec.trim match {
       case "" =>
-      case LongNegated() => throw new OptionParserException("Invalid long name specification: " + longSpec.trim + "  (The prefix '--no-' is reserved for boolean options)")
+      case LongNegated() if forBool => throw new OptionParserException("Invalid boolean long name specification: " + longSpec.trim + "  (Omit the --no- prefix)")
       case LongSpec(n, _, a) if a == null => long = n
       case LongSpec(n, d, a) => 
         long = n
