@@ -146,6 +146,9 @@ You can define switches that take no arguments, an optional argument, or a requi
 
     Boolean
         cli.bool("-t", "--timestamp", "Description") { (v, cfg) => ... }
+        
+    Integer
+        cli.int("-<number>", "Description") { (v: Int, cfg) => .. }
 
     Required Argument
         cli.reqd[String]("-n", "--name=NAME", "Description") { (v, cfg) => ... }
@@ -261,6 +264,30 @@ Short switches encountered on the command line are interpreted as follows:
        -v -b -text    <-- The -b option is interpreted without an argument
        -v -b --text   <-- The -b option is interpreted without an argument
        -v -b-text     <-- The -b option is assigned the value "-text" (no intervening space)
+       
+## How Integer Switches Are Parsed ##
+Integer switches are switches that are specified by a single dash '-' followed by one or more digts.
+such as `-10`.  Integer switches are parsed similar to short switches.  The being with a single
+dash and they may be compbined with other short switches that do not expect arguemnts.
+
+Note: If you define and integer switch, you cannot have any short switchs whose name consists of a
+digit and vice versa.
+
+    Assume that the following switches have been defined:
+       -t, --text   (Takes no argument)
+       -v           (Takes no argument)
+       -<nmumber>   (An int swtch)
+       -f FILE      (Requires an argument)
+       -b [OPT]     (Takes an optional argument)
+
+    Switches that do not accept arguments including the interger switch
+    may be specified separately or may be concatenated together:
+       -10tv  == -10 -t -v == -t10v
+
+    A switch that takes an argument may be concatenated to an integer switch 
+    as long as it is the last switch in the group:
+        -10tvf foo.tar  ==  -10 -t -v -f foo.tar
+        -tvf10 foo.tar  ==  -t -v -f 10 foo.tar  (10 becomes the argument value for the -f switch)
 
 ## How Long Switches Are Parsed ##
 Long switches encountered on the command line are interpreted as follows:
