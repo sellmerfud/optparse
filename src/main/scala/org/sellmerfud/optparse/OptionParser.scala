@@ -527,13 +527,13 @@ class OptionParser[C] {
           
         case NonSwitch(arg) => 
           for (h <- argHandler) _config = coercingExceptions(arg)(h.process(arg, _config))
-          processTokens
+          processTokens()
           
         case IntSwitchToken(switch, value, tail) =>
           //  Put the tail back on the argv list
           tail foreach (t => s"-$t" +=: argv)
           _config = coercingExceptions(arg_display)(switch.process(Some(value), false, _config))
-          processTokens
+          processTokens()
         
         case SwitchToken(switch, longForm, joinedArg, negated) =>
           var arg = (joinedArg, switch.takesArg, longForm) match {
@@ -544,7 +544,7 @@ class OptionParser[C] {
             case (None,    true,  _)     => pluckArg(switch.requiresArg)
           }
           _config = coercingExceptions(arg_display)(switch.process(arg, negated, _config))
-          processTokens
+          processTokens()
       }
     }
 

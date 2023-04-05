@@ -6,7 +6,7 @@ lazy val optparse = (project in file("."))
     name         := "optparse",
     version      := "2.3",
     organization := "org.sellmerfud",
-    scalaVersion := "2.13.0",
+    scalaVersion := "2.13.9",
     description  := "A simple but powerful Scala command line parser.",
     
     scalacOptions ++= Seq( "-deprecation", "-unchecked", "-feature" ),
