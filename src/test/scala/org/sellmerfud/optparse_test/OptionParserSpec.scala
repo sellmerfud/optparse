@@ -89,10 +89,6 @@ class OptionParserSpec extends FlatSpec with Matchers {
     
     val t6 = the [OptionParserException] thrownBy cli.flag("", "-name=ARG") { (cfg) => cfg }
     t6.getMessage should startWith (INVALID_LONG_NAME)
-    
-    // --no- prefix is reserved for boolean switches
-    val t7 = the [OptionParserException] thrownBy cli.flag("", "--no-name") { (cfg) => cfg }
-    t7.getMessage should startWith (INVALID_LONG_NAME)
   }
   
   // ====================================================================================
@@ -117,6 +113,13 @@ class OptionParserSpec extends FlatSpec with Matchers {
       flag("", "--bcd") { (cfg) => cfg }
       flag("", "--cde ARG") { (cfg) => cfg }
       flag("-c", "--cde") { (cfg) => cfg }
+    }
+  }
+  
+  it should "allow non-boolean switches to start with --no-" in {
+    case class Config()
+    val cli = new OptionParser[Config] {
+      flag("", "--no-updates") { (cfg) => cfg }
     }
   }
 
@@ -145,6 +148,30 @@ class OptionParserSpec extends FlatSpec with Matchers {
   }
   
   // ====================================================================================
+
+  it should "remove switches with identical names negated names when adding a new switch" in {
+    case class Config(ignore: Option[Boolean] = None, noIgnore: Boolean = false, noUpdate: Boolean = false, update: Option[Boolean] = None)
+    val cli = new OptionParser[Config] {
+      bool("", "--ignore")    { (v, cfg) => cfg.copy(ignore = Some(v)) }
+      flag("", "--no-ignore") { (cfg)    => cfg.copy(noIgnore = true) }
+      flag("", "--no-update") { (cfg)    => cfg.copy(noUpdate = true) }
+      bool("", "--update")    { (v, cfg) => cfg.copy(update = Some(v)) }
+    }
+
+    val config = cli.parse(Seq("--no-ignore"), Config())
+    config.ignore   shouldBe (None)
+    config.noIgnore shouldBe (true)
+
+    val config2 = cli.parse(Seq("--update"), Config())
+    config2.noUpdate shouldBe (false)
+    config2.update   shouldBe (Some(true))
+    
+    val config3 = cli.parse(Seq("--no-update"), Config())
+    config3.noUpdate shouldBe (false)
+    config3.update   shouldBe (Some(false))
+  }
+  
+  // ====================================================================================
   it should "detect attempts to add an option for a type with no argument parser" in {
     class SomeClass(name: String)
     case class Config(zoo: Option[SomeClass] = None)
@@ -154,6 +181,31 @@ class OptionParserSpec extends FlatSpec with Matchers {
       cli.reqd[SomeClass]("-z", "--zoo") { (zoo, cfg)  => cfg.copy(zoo = Some(zoo)) }
     }
   }    
+  
+  it should "remove switches with integer short names when and int() swith is defined" in {
+    case class Config(four: Boolean = false, intValue: Option[Int] = None)
+    val cli = new OptionParser[Config] {
+      flag("-4", "")    { cfg => cfg.copy(four = true) }
+      int("-<number>")  { (v, cfg) => cfg.copy(intValue = Some(v)) }
+    }
+    
+    val config = cli.parse(Seq("-4"), Config())
+    config.four     shouldBe (false)
+    config.intValue shouldBe (Some(4))
+  }    
+  
+  it should "remove int() switches when a switch with an integer short name is defined" in {
+    case class Config(four: Boolean = false, intValue: Option[Int] = None)
+    val cli = new OptionParser[Config] {
+      int("-<number>")  { (v, cfg) => cfg.copy(intValue = Some(v)) }
+      flag("-4", "")    { cfg => cfg.copy(four = true) }
+    }
+    
+    val config = cli.parse(Seq("-4"), Config())
+    config.four     shouldBe (true)
+    config.intValue shouldBe (None)
+  }    
+  
   
   // ====================================================================================
   // ================== Command Line Parsing ============================================
@@ -407,6 +459,50 @@ class OptionParserSpec extends FlatSpec with Matchers {
     
     val t2 = the [OptionParserException] thrownBy cli.parse(Seq("-xtn"), Config())
     t2.getMessage should startWith (ARGUMENT_MISSING)
+  }
+
+  // ====================================================================================
+
+  it should "allow short switches without argument and int() switches to be combined" in {
+    case class Config(
+      name: Option[String] = None,
+      expert: Boolean = false,
+      text: Boolean = false,
+      intValue: Option[Int] = None,
+      args: Vector[String] = Vector.empty)
+      
+    val cli = new OptionParser[Config] {
+      reqd[String]("-n NAME", "") { (name, cfg) => cfg.copy(name = Some(name)) }
+      int("-<number") { (v, cfg) => cfg.copy(intValue = Some(v)) }
+      flag("-x", "") { (cfg) => cfg.copy(expert = true) }
+      flag("-t", "") { (cfg) => cfg.copy(text = true) }
+      arg[String] { (arg, cfg) => cfg.copy(args = cfg.args :+ arg) }
+    }
+    
+    val c1 = cli.parse(Seq("-10n", "curt", "foo"), Config())
+    c1.args shouldBe (Vector("foo"))
+    c1.name shouldBe (Some("curt"))
+    c1.intValue shouldBe (Some(10))
+
+    val c2 = cli.parse(Seq("-x10", "-ncurt", "foo"), Config())
+    c2.args shouldBe (Vector("foo"))
+    c2.name shouldBe (Some("curt"))
+    c2.expert shouldBe (true)
+    c2.intValue shouldBe (Some(10))
+
+    val c3 = cli.parse(Seq("-x10tn", "curt", "foo"), Config())
+    c3.args shouldBe (Vector("foo"))
+    c3.name shouldBe (Some("curt"))
+    c3.expert shouldBe (true)
+    c3.text shouldBe (true)
+    c3.intValue shouldBe (Some(10))
+    
+    val c4 = cli.parse(Seq("-xtncurt", "foo"), Config())
+    c4.args shouldBe (Vector("foo"))
+    c4.name shouldBe (Some("curt"))
+    c4.expert shouldBe (true)
+    c4.text shouldBe (true)
+    c4.intValue shouldBe (None)
   }
 
   // ====================================================================================
