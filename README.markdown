@@ -7,7 +7,7 @@ By using closures when defining command line switches your code becomes much eas
 ## Maven Information ##
     groupId:     org.sellmerfud
     artifactId:  optparse_2.13
-    version:     2.2
+    version:     2.3
     -- or --
     artifactId:  optparse_2.12
     version:     2.2
@@ -20,6 +20,8 @@ By using closures when defining command line switches your code becomes much eas
     
 ## Sbt Configuration ##
 
+###### For Scala version 2.13:
+    libraryDependencies += "org.sellmerfud" %% "optparse" % "2.3"
 ###### For Scala versions 2.11, 2.12 and 2.13:
     libraryDependencies += "org.sellmerfud" %% "optparse" % "2.2"
 ###### For Scala version 2.10:
