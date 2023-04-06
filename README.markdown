@@ -269,16 +269,16 @@ Short switches encountered on the command line are interpreted as follows:
        
 ## How Integer Switches Are Parsed ##
 Integer switches are switches that are specified by a single dash '-' followed by one or more digts.
-such as `-10`.  Integer switches are parsed similar to short switches.  The being with a single
-dash and they may be compbined with other short switches that do not expect arguemnts.
+such as `-10`.  Integer switches are parsed similar to short switches.  The begin with a single
+dash and they may be combined with other short switches that do not expect arguments.
 
-Note: If you define and integer switch, you cannot have any short switchs whose name consists of a
+Note: If you define an integer switch, you cannot have any short switchs whose name consists of a
 digit and vice versa.
 
     Assume that the following switches have been defined:
        -t, --text   (Takes no argument)
        -v           (Takes no argument)
-       -<nmumber>   (An int swtch)
+       -<nmumber>   (An integer swtch)
        -f FILE      (Requires an argument)
        -b [OPT]     (Takes an optional argument)
 
