@@ -8,19 +8,6 @@ By using closures when defining command line switches your code becomes much eas
 
 [![optparse Scala version support](https://index.scala-lang.org/sellmerfud/optparse/optparse/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/sellmerfud/optparse/optparse)
 
-## Maven Information ##
-    groupId:     org.sellmerfud
-    artifactId:  optparse_2.13
-    version:     2.3
-    -- or --
-    artifactId:  optparse_2.12
-    version:     2.2
-    -- or --
-    artifactId:  optparse_2.11
-    version:     2.2
-    -- or --
-    artifactId:  optparse_2.10, optparse_2.9.2
-    version:     2.0
     
 ## Sbt Configuration ##
 
