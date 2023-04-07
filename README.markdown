@@ -4,6 +4,10 @@ It is based on the Ruby OptionParser class that is part of the standard Ruby lib
 POSIX style short option switches as well as GNU style long option switches.
 By using closures when defining command line switches your code becomes much easier to write and maintain.
 
+[![optparse Scala version support](https://index.scala-lang.org/sellmerfud/optparse/optparse/latest.svg)](https://index.scala-lang.org/sellmerfud/optparse/optparse)
+
+[![optparse Scala version support](https://index.scala-lang.org/sellmerfud/optparse/optparse/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/sellmerfud/optparse/optparse)
+
 ## Maven Information ##
     groupId:     org.sellmerfud
     artifactId:  optparse_2.13
