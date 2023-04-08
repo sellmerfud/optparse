@@ -11,7 +11,7 @@ By using closures when defining command line switches your code becomes much eas
     
 ## Sbt Configuration ##
 
-###### For Scala versions 2.12 and 2.13:
+###### For Scala versions 2.12,  2.13, and 3:
     libraryDependencies += "org.sellmerfud" %% "optparse" % "2.3"
 ###### For Scala versions 2.11, 2.12 and 2.13:
     libraryDependencies += "org.sellmerfud" %% "optparse" % "2.2"
