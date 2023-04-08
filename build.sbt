@@ -6,13 +6,13 @@ lazy val optparse = (project in file("."))
     name         := "optparse",
     version      := "2.3",
     organization := "org.sellmerfud",
-    scalaVersion := "2.13.9",
+    scalaVersion := "2.13.10",
     description  := "A simple but powerful Scala command line parser.",
     
     scalacOptions ++= Seq( "-deprecation", "-unchecked", "-feature" ),
     
-    libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.8",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test",
+    libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.15" % "test",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.15" % "test",
     
     ThisBuild / versionScheme := Some("semver-spec"),
     credentials += Credentials(Path.userHome / ".sbt" / "pgp.credentials"),

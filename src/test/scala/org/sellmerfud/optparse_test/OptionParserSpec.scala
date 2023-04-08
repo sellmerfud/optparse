@@ -22,12 +22,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 package org.sellmerfud.optparse_test
 
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.flatspec._
+import org.scalatest.matchers._
 
 import org.sellmerfud.optparse._
 
-class OptionParserSpec extends FlatSpec with Matchers {
+class OptionParserSpec extends AnyFlatSpec with should.Matchers {
   val ARGUMENT_MISSING   = "argument missing:"
   val INVALID_ARGUMENT   = "invalid argument:"
   val AMBIGUOUS_ARGUMENT = "ambiguous argument:"
@@ -951,7 +951,7 @@ class OptionParserSpec extends FlatSpec with Matchers {
     case class Foo(s: String)
     case class Config(foo1: Option[Foo] = None, foo2: Option[Foo] = None)
     val cli = new OptionParser[Config] {
-      addArgumentParser[Foo] { s: String => Foo(s) }
+      addArgumentParser[Foo] { (s: String) => Foo(s) }
       reqd[Foo]("", "--foo1") { (foo, cfg) => cfg.copy(foo1 = Some(foo)) }
       optl[Foo]("", "--foo2") { (foo, cfg) => cfg.copy(foo2 = foo orElse Some(Foo("Default"))) }
       arg[String] { (_, _) => throw new Exception("arg() should not be called!") }
