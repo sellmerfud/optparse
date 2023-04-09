@@ -1,13 +1,29 @@
 
 import xerial.sbt.Sonatype._
 
+lazy val scala_3_2  = "3.2.2"
+lazy val scala_2_13 = "2.13.10"
+lazy val scala_2_12 = "2.12.17"
+lazy val supportedScalaVersions = List(scala_3_2, scala_2_13, scala_2_12)
+
+// Set the default version for building
+ThisBuild / scalaVersion := scala_2_13
+
+// lazy val root = (project in file("."))
+//   .aggregate(optparse)
+//   .settings(
+//     name               := "optparse root",
+//     publish / skip     := true,
+//     crossScalaVersions := Nil,
+//   )
+  
 lazy val optparse = (project in file("."))
   .settings(
-    name         := "optparse",
-    version      := "2.3",
-    organization := "org.sellmerfud",
-    scalaVersion := "2.13.10",
-    description  := "A simple but powerful Scala command line parser.",
+    name               := "optparse",
+    description        := "A simple but powerful Scala command line parser.",
+    version            := "2.4-SNAPSHOT",
+    organization       := "org.sellmerfud",
+    crossScalaVersions := supportedScalaVersions,
     
     scalacOptions ++= Seq( "-deprecation", "-unchecked", "-feature" ),
     
